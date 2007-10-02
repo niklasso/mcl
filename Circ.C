@@ -20,6 +20,36 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Circ.h"
 
 //=================================================================================================
+// Circ members:
+
+static const unsigned int nprimes          = 25;
+static const unsigned int primes [nprimes] = { 31, 73, 151, 313, 643, 1291, 2593, 5233, 10501, 21013, 42073, 84181, 168451, 337219, 674701, 1349473, 2699299, 5398891, 10798093, 21596719, 43193641, 86387383, 172775299, 345550609, 691101253 };
+
+void Circ::restrash()
+{
+    // Find new size:
+    unsigned int oldsize = strash_cap;
+    strash_cap  = primes[0];
+    for (unsigned int i = 1; strash_cap <= oldsize && i < nprimes; i++)
+        strash_cap = primes[i];
+
+    printf("New strash size: %d\n", strash_cap);
+
+    // Allocate and initialize memory for new table:
+    strash = (Gate*)realloc(strash, sizeof(Gate) * strash_cap);
+    for (unsigned int i = 0; i < strash_cap; i++)
+        strash[i] = gate_Undef;
+
+    // Rehash active and-nodes into new table:
+    for (int i = 1; i < gates.size(); i++){
+        GateType t = gates[mkGate(i, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And;
+        Gate     g = mkGate(i, t);
+        deleted.growTo(g, 0);
+        if (t == gtype_And && !deleted[g]) strashInsert(g);
+    }
+}
+
+//=================================================================================================
 // Circ utility functions:
 
 

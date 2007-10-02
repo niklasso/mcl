@@ -20,7 +20,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Circ_h
 #define Circ_h
 
-#include "Set.h"
 #include "CircTypes.h"
 #include "SolverTypes.h"
 
@@ -35,8 +34,8 @@ const uint32_t pair_hash_prime = 148814101;
 class Circ
 {
     // Types:
-    struct Bin { Sig x, y; };
-    typedef GMap<Bin> Gates;
+    struct GateData { Gate strash_next; Sig x, y; };
+    typedef GMap<GateData> Gates;
 
     struct Eq { 
         const Gates& gs; 
@@ -59,22 +58,37 @@ class Circ
 
     // Member variables:
     Gates               gates;
-    Set<Gate, Hash, Eq> strash;
     unsigned int        next_id;
     vec<unsigned int>   free_ids;
     Gate                tmp_gate;
+    GMap<char>          deleted;
+
+    Hash                gate_hash;
+    Eq                  gate_eq;
     unsigned int        n_inps;
+    unsigned int        n_ands;
+    Gate*               strash;
+    unsigned int        strash_cap;
+    
+    vec<vec<Sig> > constraints;
 
     // Private methods:
     unsigned int allocId();
     void         freeId (unsigned int id);
 
-    vec<vec<Sig> > constraints;
+    void         strashInsert(Gate g);
+    Gate         strashFind  (Gate g);
+    void         restrash    ();
 
  public:
-    Circ() : strash(Hash(gates), Eq(gates)), next_id(1), tmp_gate(gate_True), n_inps(0) { gates.growTo(tmp_gate); }
+    Circ() : next_id(1), tmp_gate(gate_True), gate_hash(Hash(gates)), gate_eq(Eq(gates)), n_inps(0), n_ands(0), strash(NULL), strash_cap(0) 
+        { 
+            restrash();
+            gates.growTo(tmp_gate); 
+            gates[tmp_gate].strash_next = gate_Undef;
+        }
 
-    int nGates() const { return gates.size()- free_ids.size() - n_inps - 1; }
+    int nGates() const { return n_ands; }
     int nInps () const { return n_inps; }
 
     // Node constructor functions:
@@ -84,6 +98,9 @@ class Circ
     Sig mkXorOdd (Sig x, Sig y);
     Sig mkXorEven(Sig x, Sig y);
     Sig mkXor    (Sig x, Sig y);
+    
+    // De-allocation:
+    void freeGate(Gate g); 
 
     // Add extra implications:
     void constrain(const vec<Sig>& xs) { constraints.push(); xs.copyTo(constraints.last()); }
@@ -133,14 +150,51 @@ inline unsigned int Circ::allocId()
 
     return id;
 }
-
-
 inline void Circ::freeId(unsigned int id){ free_ids.push(id); }
+inline void Circ::freeGate(Gate g){ 
+    if (type(g) == gtype_Inp) n_inps--; else n_ands--;
+    deleted.growTo(g, 0);
+    deleted[g] = 1;
+    freeId(index(g));
+}
+
+//=================================================================================================
+// Implementation of strash-functions:
+
+inline void Circ::strashInsert(Gate g)
+{
+    assert(g != tmp_gate);
+    assert(strashFind(g) == gate_Undef);
+    assert(type(g) == gtype_And);
+    if (n_ands + 1 > strash_cap / 2) 
+        restrash();
+    else {
+        uint32_t pos = gate_hash(g) % strash_cap;
+        assert(strash[pos] != g);
+        gates[g].strash_next = strash[pos];
+        strash[pos] = g;
+    }
+}
+
+
+inline Gate Circ::strashFind  (Gate g)
+{
+    assert(type(g) == gtype_And);
+    Gate h;
+    //printf("searching for gate:\n");
+    for (h = strash[gate_hash(g) % strash_cap]; h != gate_Undef && !gate_eq(h, g); h = gates[h].strash_next){
+        //printf(" --- inspecting gate: %d\n", index(h));
+        assert(type(h) == gtype_And);
+    }
+    return h;
+}
+
+
 inline Sig  Circ::lchild(Gate g) const   { assert(type(g) == gtype_And); return gates[g].x; }
 inline Sig  Circ::rchild(Gate g) const   { assert(type(g) == gtype_And); return gates[g].y; }
 inline Sig  Circ::lchild(Sig  x) const   { assert(type(x) == gtype_And); return gates[gate(x)].x; }
 inline Sig  Circ::rchild(Sig  x) const   { assert(type(x) == gtype_And); return gates[gate(x)].y; }
-inline Sig  Circ::mkInp    ()            { n_inps++; return mkSig(mkGate(allocId(), gtype_Inp), false); }
+inline Sig  Circ::mkInp    ()            { n_inps++; Gate g = mkGate(allocId(), gtype_Inp); gates[g].x = sig_Undef; return mkSig(g, false); }
 inline Sig  Circ::mkOr     (Sig x, Sig y){ return ~mkAnd(~x, ~y); }
 inline Sig  Circ::mkXorOdd (Sig x, Sig y){ return mkOr (mkAnd(x, ~y), mkAnd(~x, y)); }
 inline Sig  Circ::mkXorEven(Sig x, Sig y){ return mkAnd(mkOr(~x, ~y), mkOr ( x, y)); }
@@ -164,12 +218,14 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
 
     //printf("looking up node: %c%d & %c%d\n", sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
 
-    if (!strash.peek(g)){
+    g = strashFind(g);
+    if (g == gate_Undef){
         // New node needs to be created:
         g = mkGate(allocId(), gtype_And);
         gates[g].x = x;
         gates[g].y = y;
-        strash.insert(g);
+        strashInsert(g);
+        n_ands++;
         //printf("created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
         //printf(" -- created new node.\n");
     }
