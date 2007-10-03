@@ -78,12 +78,12 @@ class Circ
 
     void         strashInsert(Gate g);
     Gate         strashFind  (Gate g);
-    void         restrash    ();
+    void         restrashAll ();
 
  public:
     Circ() : next_id(1), tmp_gate(gate_True), gate_hash(Hash(gates)), gate_eq(Eq(gates)), n_inps(0), n_ands(0), strash(NULL), strash_cap(0) 
         { 
-            restrash();
+            restrashAll();
             gates.growTo(tmp_gate); 
             gates[tmp_gate].strash_next = gate_Undef;
         }
@@ -161,21 +161,6 @@ inline void Circ::freeGate(Gate g){
 //=================================================================================================
 // Implementation of strash-functions:
 
-inline void Circ::strashInsert(Gate g)
-{
-    assert(g != tmp_gate);
-    assert(strashFind(g) == gate_Undef);
-    assert(type(g) == gtype_And);
-    if (n_ands + 1 > strash_cap / 2) 
-        restrash();
-    else {
-        uint32_t pos = gate_hash(g) % strash_cap;
-        assert(strash[pos] != g);
-        gates[g].strash_next = strash[pos];
-        strash[pos] = g;
-    }
-}
-
 
 inline Gate Circ::strashFind  (Gate g)
 {
@@ -188,6 +173,20 @@ inline Gate Circ::strashFind  (Gate g)
     }
     return h;
 }
+
+
+inline void Circ::strashInsert(Gate g)
+{
+    assert(type(g) == gtype_And);
+    assert(g != tmp_gate);
+    assert(strashFind(g) == gate_Undef);
+    uint32_t pos = gate_hash(g) % strash_cap;
+    assert(strash[pos] != g);
+    gates[g].strash_next = strash[pos];
+    strash[pos] = g;
+}
+
+
 
 
 inline Sig  Circ::lchild(Gate g) const   { assert(type(g) == gtype_And); return gates[g].x; }
@@ -224,8 +223,13 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
         g = mkGate(allocId(), gtype_And);
         gates[g].x = x;
         gates[g].y = y;
-        strashInsert(g);
         n_ands++;
+
+        if (n_ands > strash_cap / 2)
+            restrashAll();
+        else
+            strashInsert(g);
+
         //printf("created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
         //printf(" -- created new node.\n");
     }
