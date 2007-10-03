@@ -28,6 +28,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 void fullAdder (Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry);
 void dadaAdder (Circ& c, vec<vec<Sig> >& columns, vec<Sig>& result);
 void multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result);
+void squarer   (Circ& c, vec<Sig>& xs, vec<Sig>& result);
 
 void fullAdderCorrect(void);
 void multiplierCorrect(int size);

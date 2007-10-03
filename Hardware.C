@@ -98,6 +98,30 @@ void multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result)
 }
 
 
+//-------------------------------------------------------------------------------------------------
+// Squarer:
+
+void squarer(Circ& c, vec<Sig>& xs, vec<vec<Sig> >& columns)
+{
+    columns.clear();
+    for (int i = 0; i < xs.size(); i++)
+        for (int j = 0; j < i; j++){
+            columns.growTo(i+j+2);
+            columns[i+j+1].push(c.mkAnd(xs[i], xs[j]));
+        }
+            
+    for (int i = 0; i < xs.size(); i++)
+        columns[i].push(xs[i]);
+}
+
+void squarer(Circ& c, vec<Sig>& xs, vec<Sig>& result)
+{
+    vec<vec<Sig> > columns;
+    squarer  (c, xs, columns);
+    dadaAdder(c, columns, result);
+}
+
+
 //=================================================================================================
 // Debug etc:
 
@@ -255,6 +279,53 @@ static uint64_t nBits(uint64_t number)
 
 
 void factorize64(uint64_t number)
+{
+    Circ      c;
+    vec<bool> binary_number; binarizeNumber(number, binary_number);
+    uint64_t  iroot     = floor(sqrt(number));
+    int       xs_length = nBits(iroot);
+    int       ys_length = nBits(ceil((double)number / iroot));
+
+    //if (((1ULL << xs_length)-1)*((1ULL << ys_length)-1) < number){
+    //    printf("NO FACTORS (trivially)\n");
+    //    return; }
+
+    vec<Sig>  xs; for (int i = 0; i < xs_length; i++) xs.push(c.mkInp());
+    vec<Sig>  ys; for (int i = 0; i < ys_length; i++) ys.push(c.mkInp());
+    vec<Sig>  result;
+    multiplier(c, xs, ys, result);
+
+    SimpSolver s;
+    Clausifyer<SimpSolver> cl(c, s);
+
+    for (int i = 0; i < result.size(); i++){
+        bool value = i < binary_number.size() ? binary_number[i] : false;
+        Lit  p     = cl.clausify(result[i]);
+        vec<Lit> tmp; tmp.push(p ^ !value); s.addClause(tmp);
+    }
+    //cl.addConstraints();
+
+    printf("factorizing: %lld - binary: ", number);
+    for (int i = binary_number.size()-1; i >= 0; i--)
+        if (binary_number[i])
+            printf("1");
+        else
+            printf("0");
+    printf("\n");
+    printf("largest square smaller than target = %llu\n", iroot);
+    printf("xs bits = %d\n", xs_length);
+    printf("ys bits = %d\n", ys_length);
+
+    s.verbosity = 1;
+    s.toDimacs("fisk.cnf");
+    if (s.solve()){
+        printf("SOLUTION %lld = %lld * %lld\n", number, unbinarizeSolution(xs, cl, s), unbinarizeSolution(ys, cl, s));
+    }else
+        printf("NO FACTORS\n");
+}
+
+
+void factorize64squarer(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
