@@ -72,5 +72,14 @@ int main(int argc, char** argv)
     //if (argc == 2)
     //    factorize64(atoll(argv[1]));
 
+    Circ     c; 
+    vec<Sig> inputs;
+    vec<Sig> outputs;
+    vec<Def> latch_defs;
+
+    if (argc == 2){
+        readAiger(argv[1], c, inputs, latch_defs, outputs);
+    }
+
     return 0;
 }
