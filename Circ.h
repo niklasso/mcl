@@ -29,7 +29,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // Circ -- a class for representing combinational circuits.
 
 
-const uint32_t pair_hash_prime = 148814101;
+const uint32_t pair_hash_prime = 1073741789;
 
 class Circ
 {

@@ -22,8 +22,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //=================================================================================================
 // Circ members:
 
-static const unsigned int nprimes          = 25;
-static const unsigned int primes [nprimes] = { 31, 73, 151, 313, 643, 1291, 2593, 5233, 10501, 21013, 42073, 84181, 168451, 337219, 674701, 1349473, 2699299, 5398891, 10798093, 21596719, 43193641, 86387383, 172775299, 345550609, 691101253 };
+
+static const unsigned int nprimes   = 47;
+static const unsigned int primes [] = { 31, 47, 71, 107, 163, 251, 379, 569, 853, 1279, 1931, 2897, 4349, 6529, 9803, 14713, 22073, 33113, 49669, 74507, 111767, 167663, 251501, 377257, 565889, 848839, 1273267, 1909907, 2864867, 4297301, 6445951, 9668933, 14503417, 21755137, 32632727, 48949091, 73423639, 110135461, 165203191, 247804789, 371707213, 557560837, 836341273, 1254511933, 1881767929, 2822651917U, 4233977921U };
+
+//static const unsigned int nprimes          = 25;
+//static const unsigned int primes [nprimes] = { 31, 73, 151, 313, 643, 1291, 2593, 5233, 10501, 21013, 42073, 84181, 168451, 337219, 674701, 1349473, 2699299, 5398891, 10798093, 21596719, 43193641, 86387383, 172775299, 345550609, 691101253 };
 
 void Circ::restrashAll()
 {
@@ -33,7 +37,7 @@ void Circ::restrashAll()
     for (unsigned int i = 1; strash_cap <= oldsize && i < nprimes; i++)
         strash_cap = primes[i];
 
-    printf("New strash size: %d\n", strash_cap);
+    // printf("New strash size: %d\n", strash_cap);
 
     // Allocate and initialize memory for new table:
     strash = (Gate*)realloc(strash, sizeof(Gate) * strash_cap);

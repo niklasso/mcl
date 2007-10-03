@@ -20,18 +20,26 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "ParseUtils.h"
 #include "Aiger.h"
 
-unsigned int readPacked(StreamBuffer& in){
+static unsigned int readPacked(StreamBuffer& in){
     unsigned int x = 0, i = 0;
-    int          ch;
+    int ch;
 
     while ((ch = *in) & 0x80){
         if (ch == EOF) fprintf(stderr, "ERROR! Unexpected end of file!\n"), exit(1);
-        ++in;
         x |= (ch & 0x7f) << (7 * i++);
+        ++in;
     }
     if (ch == EOF) fprintf(stderr, "ERROR! Unexpected end of file!\n"), exit(1);
+    ++in;
     
     return x | (ch << (7 * i));
+}
+
+
+static Sig mapSig(vec<Gate>& id2gate, int aiger_lit) { 
+    if (aiger_lit == 0)      return sig_False;
+    else if (aiger_lit == 1) return sig_True;
+    else return mkSig(id2gate[aiger_lit >> 1], bool(aiger_lit & 1));
 }
 
 
@@ -53,12 +61,12 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
     int n_outputs = parseInt(in);
     int n_gates   = parseInt(in);
 
-    fprintf(stderr, "max_var   = %d\n", max_var);
-    fprintf(stderr, "n_inputs  = %d\n", n_inputs);
-    fprintf(stderr, "n_outputs = %d\n", n_outputs);
-    fprintf(stderr, "n_latches = %d\n", n_latches);
-    fprintf(stderr, "n_gates   = %d\n", n_gates);
-    fprintf(stderr, "sum       = %d\n", n_gates + n_latches + n_inputs);
+    // fprintf(stderr, "max_var   = %d\n", max_var);
+    // fprintf(stderr, "n_inputs  = %d\n", n_inputs);
+    // fprintf(stderr, "n_outputs = %d\n", n_outputs);
+    // fprintf(stderr, "n_latches = %d\n", n_latches);
+    // fprintf(stderr, "n_gates   = %d\n", n_gates);
+    // fprintf(stderr, "sum       = %d\n", n_gates + n_latches + n_inputs);
 
     if (max_var != n_inputs + n_latches + n_gates)
         fprintf(stderr, "ERROR! Header mismatching sizes (M != I + L + A)\n"), exit(1);
@@ -96,14 +104,22 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
     for (int i = n_inputs + n_latches + 1; i < max_var + 1; i++){
         unsigned delta0 = readPacked(in);
         unsigned delta1 = readPacked(in);
-        unsigned x      = i - delta0;
-        unsigned y      = x - delta1;
-        //printf("i = %3d, x = %3d, y = %3d\n", i, x, y);
-        Sig      left   = x == 0 ? sig_False : x == 1 ? sig_True : mkSig(id2gate[x >> 1], x&1);
-        Sig      right  = y == 0 ? sig_False : y == 1 ? sig_True : mkSig(id2gate[y >> 1], y&1);
-        id2gate[i]      = gate(c.mkAnd(left, right));
+        unsigned x      = 2*i - delta0;
+        unsigned y      = x   - delta1;
+        id2gate[i]      = gate(c.mkAnd(mapSig(id2gate, x), mapSig(id2gate, y)));
+
+        assert   ((int)delta0 < 2*i);
+        assert   (delta1 <= 2*i - delta0);
     }
-    printf("Resulting number of gates: %d\n", c.nGates());
+    printf("Read %d number of gates\n", c.nGates());
+
+    // Map outputs:
+    for (int i = 0; i < aiger_outputs.size(); i++)
+        outputs.push(mapSig(id2gate, aiger_outputs[i]));
+
+    // Map latches:
+    for (int i = 0; i < aiger_latch_defs.size(); i++)
+        latch_defs[i].def = mapSig(id2gate, aiger_latch_defs[i]);
 }
 
 

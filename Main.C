@@ -24,6 +24,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "Hardware.h"
 
+#include "System.h"
+
 #include <cstdio>
 
 void basicCircTest()
@@ -65,9 +67,9 @@ void basicCircTest()
 
 int main(int argc, char** argv)
 {
-    basicCircTest();
-    fullAdderCorrect();
-    multiplierCorrect(4);
+    //basicCircTest();
+    //fullAdderCorrect();
+    //multiplierCorrect(4);
 
     //if (argc == 2)
     //    factorize64(atoll(argv[1]));
@@ -79,6 +81,8 @@ int main(int argc, char** argv)
 
     if (argc == 2){
         readAiger(argv[1], c, inputs, latch_defs, outputs);
+        printf("CPU Time: %8.2f s\n", cpuTime());
+        printf("Memory:   %8.2f Mb\n", memUsed());
     }
 
     return 0;
