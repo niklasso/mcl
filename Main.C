@@ -69,8 +69,8 @@ int main(int argc, char** argv)
     fullAdderCorrect();
     multiplierCorrect(4);
 
-    if (argc == 2)
-        factorize64(atoll(argv[1]));
+    //if (argc == 2)
+    //    factorize64(atoll(argv[1]));
 
     return 0;
 }

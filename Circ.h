@@ -97,6 +97,15 @@ class Circ
     Sig rchild(Sig x)  const;
 };
 
+
+//=================================================================================================
+// A simple container for circuit bindings, i.e. variable/definition pairs:
+
+struct Def {
+    Sig var; // type must be gtype_Inp;
+    Sig def;
+};
+
 //=================================================================================================
 // Circ utility functions:
 

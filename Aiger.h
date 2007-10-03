@@ -27,6 +27,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // for specification of this format as well as supporting tools and example circuits.
 
 
+void readAiger (const char* filename, Circ& c, vec<Sig>& outputs, vec<Sig>& latch_defs);
+void writeAiger(const char* filename, Circ& c, const vec<Sig>& outputs, const vec<Sig>& latch_defs);
 
 //=================================================================================================
 #endif
