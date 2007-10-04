@@ -127,7 +127,7 @@ class Clausifyer
                 //    printf("%s%d ", sign(big_and[i])?"~":"", index(gate(big_and[i])));
                 //printf("\n");
 
-                Lit      lg = mkLit(vmap[g]);
+                Lit lg = mkLit(vmap[g]);
                 vec<Lit> lits;
                 for (int i = 0; i < big_and.size(); i++){
                     assert(gate(big_and[i]) != g);

@@ -1,4 +1,4 @@
-EXEC      = slask
+EXEC      = minisat
 DEPDIR    = mtl core simp utils
 
 CFLAGS    = -Wall -ffloat-store

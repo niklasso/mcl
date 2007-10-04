@@ -111,7 +111,7 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
         assert   ((int)delta0 < 2*i);
         assert   (delta1 <= 2*i - delta0);
     }
-    printf("Read %d number of gates\n", c.nGates());
+    // printf("Read %d number of gates\n", c.nGates());
 
     // Map outputs:
     for (int i = 0; i < aiger_outputs.size(); i++)
