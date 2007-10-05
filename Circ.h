@@ -75,6 +75,7 @@ class Circ
     // Private methods:
     unsigned int allocId();
     void         freeId (unsigned int id);
+    GateType     idType (unsigned int id) const { return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 
     void         strashInsert(Gate g);
     Gate         strashFind  (Gate g);
@@ -83,13 +84,25 @@ class Circ
  public:
     Circ() : next_id(1), tmp_gate(gate_True), gate_hash(Hash(gates)), gate_eq(Eq(gates)), n_inps(0), n_ands(0), strash(NULL), strash_cap(0) 
         { 
-            restrashAll();
             gates.growTo(tmp_gate); 
+            restrashAll();
             gates[tmp_gate].strash_next = gate_Undef;
         }
 
+    int size  () const { return gates.size()-1; }
     int nGates() const { return n_ands; }
     int nInps () const { return n_inps; }
+
+    // Gate iterator:
+    Gate nextGate (Gate g) const { 
+        if (g == gate_Undef) return gate_Undef;
+        assert(index(g) < (unsigned int)gates.size());
+        do g = mkGate(index(g)+1, idType(index(g)+1)); 
+        while ((int)index(g) < gates.size() && deleted[g]);
+        return (index(g) == (unsigned)gates.size() || deleted[g]) ? gate_Undef : g; }
+    Gate firstGate()       const { return nextGate(mkGate(0, idType(0))); }
+    Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
+
 
     // Node constructor functions:
     Sig mkInp    ();
@@ -132,6 +145,12 @@ struct Def {
 bool evaluate(const Circ& c, Sig x, GMap<lbool>& values);
 
 
+void bottomUpOrder(Circ& c, Gate g, GSet& gset);
+void bottomUpOrder(Circ& c, Sig  x, GSet& gset);
+void bottomUpOrder(Circ& c, const vec<Gate>& gs, GSet& gset);
+void bottomUpOrder(Circ& c, const vec<Sig>&  xs, GSet& gset);
+void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset);
+
 //=================================================================================================
 // Implementation of inline methods:
 
@@ -145,7 +164,8 @@ inline unsigned int Circ::allocId()
     }else{
         // Must choose a new index, and adjust map-size of 'gates':
         id = next_id++;
-        gates.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
+        gates.  growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
+        deleted.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp), 0);
     }
 
     return id;
@@ -215,7 +235,7 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
     gates[g].x = x;
     gates[g].y = y;
 
-    //printf("looking up node: %c%d & %c%d\n", sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
+    // fprintf(stderr, "looking up node: %c%d & %c%d\n", sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
 
     g = strashFind(g);
     if (g == gate_Undef){
@@ -230,7 +250,7 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
         else
             strashInsert(g);
 
-        //printf("created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
+        // fprintf(stderr, "created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
         //printf(" -- created new node.\n");
     }
     //else

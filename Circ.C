@@ -26,9 +26,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 static const unsigned int nprimes   = 47;
 static const unsigned int primes [] = { 31, 47, 71, 107, 163, 251, 379, 569, 853, 1279, 1931, 2897, 4349, 6529, 9803, 14713, 22073, 33113, 49669, 74507, 111767, 167663, 251501, 377257, 565889, 848839, 1273267, 1909907, 2864867, 4297301, 6445951, 9668933, 14503417, 21755137, 32632727, 48949091, 73423639, 110135461, 165203191, 247804789, 371707213, 557560837, 836341273, 1254511933, 1881767929, 2822651917U, 4233977921U };
 
-//static const unsigned int nprimes          = 25;
-//static const unsigned int primes [nprimes] = { 31, 73, 151, 313, 643, 1291, 2593, 5233, 10501, 21013, 42073, 84181, 168451, 337219, 674701, 1349473, 2699299, 5398891, 10798093, 21596719, 43193641, 86387383, 172775299, 345550609, 691101253 };
-
 void Circ::restrashAll()
 {
     // Find new size:
@@ -45,12 +42,9 @@ void Circ::restrashAll()
         strash[i] = gate_Undef;
 
     // Rehash active and-nodes into new table:
-    for (int i = 1; i < gates.size(); i++){
-        GateType t = gates[mkGate(i, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And;
-        Gate     g = mkGate(i, t);
-        deleted.growTo(g, 0);
-        if (t == gtype_And && !deleted[g]) strashInsert(g);
-    }
+    for (Gate g = firstGate(); g != gate_Undef; g = nextGate(g))
+        if (type(g) == gtype_And) 
+            strashInsert(g);
 }
 
 //=================================================================================================
@@ -72,4 +66,50 @@ bool evaluate(const Circ& c, Sig x, GMap<lbool>& values)
     }
     assert(values[g] != l_Undef);
     return (values[g] ^ sign(x)) == l_True;
+}
+
+
+
+void bottomUpOrder(Circ& c, Sig  x, GSet& gset) { bottomUpOrder(c, gate(x), gset); }
+void bottomUpOrder(Circ& c, Gate g, GSet& gset)
+{
+    if (gset.has(g)) return;
+
+    if (type(g) == gtype_And){
+        bottomUpOrder(c, gate(c.lchild(g)), gset);
+        bottomUpOrder(c, gate(c.rchild(g)), gset);
+    }
+    gset.insert(g);
+}
+
+
+void bottomUpOrder(Circ& c, const vec<Gate>& gs, GSet& gset)
+{
+    for (int i = 0; i < gs.size(); i++)
+        bottomUpOrder(c, gs[i], gset);
+}
+
+
+void bottomUpOrder(Circ& c, const vec<Sig>& xs, GSet& gset)
+{
+    for (int i = 0; i < xs.size(); i++)
+        bottomUpOrder(c, xs[i], gset);
+}
+
+
+void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset)
+{
+    bool repeat;
+    do {
+        repeat = false;
+        for (int i = 0; i < latch_defs.size(); i++){
+            Gate g = gate(latch_defs[i].var);
+            Gate d = gate(latch_defs[i].def);
+            
+            if (gset.has(g) && !gset.has(d)){
+                bottomUpOrder(c, d, gset);
+                repeat = true;
+            }
+        }
+    } while (repeat);
 }
