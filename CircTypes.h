@@ -127,4 +127,25 @@ class SMap : private vec<T>
 
 
 //=================================================================================================
+// Ordered set-type: (intantiateable with Sig or Gate)
+
+class GSet
+{
+    GMap<char> in_set;
+    vec<Gate>  gs;
+
+ public:
+    // Size operations:
+    int      size        (void)      const  { return gs.size(); }
+    void     clear       (bool free = false){ gs.clear(free); in_set.clear(free); }
+    
+    // Vector interface:
+    Gate     operator [] (int index) const  { return gs[index]; }
+
+
+    void     insert      (Gate g) { in_set.growTo(g, 0); if (!in_set[g]) { in_set[g] = 1; gs.push(g); } }
+    bool     has         (Gate g) { in_set.growTo(g, 0); return in_set[g]; }
+};
+
+//=================================================================================================
 #endif
