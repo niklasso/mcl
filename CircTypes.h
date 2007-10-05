@@ -66,6 +66,7 @@ inline  Sig mkSig(Gate g, bool sign = false){
     Sig p; p.x = g.x + (unsigned)sign + (unsigned)sign; return p; }
 
 inline  Sig      operator ~(Sig p)                       { Sig q; q.x = p.x ^ 2; return q; }
+inline  Sig      operator ^(Sig p, bool b)               { Sig q; q.x = p.x ^ (((unsigned int)b)<<1); return q; }
 inline  bool     sign      (Sig p)                       { return bool(p.x & 2); }
 inline  Gate     gate      (Sig p)                       { return mkGate(p.x >> 2, GateType(p.x & 1)); }
 inline  GateType type      (Sig p)                       { return GateType(p.x & 1); }
