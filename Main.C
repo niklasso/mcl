@@ -61,6 +61,7 @@ void printUsage(char** argv, SimpSolver& S)
 {
     reportf("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n\n", argv[0]);
     reportf("OPTIONS:\n\n");
+    reportf("  -clausify-naive                      (default: off)\n");
     reportf("  -pre,    -no-pre                     (default: on)\n");
     reportf("  -elim,   -no-elim                    (default: %s)\n", S.use_elim           ? "on" : "off");
     reportf("  -asymm,  -no-asymm                   (default: %s)\n", S.use_asymm          ? "on" : "off");
@@ -72,6 +73,7 @@ void printUsage(char** argv, SimpSolver& S)
     reportf("  -rnd-freq      = <double>  [ 0 - 1 ] (default: %g)\n", S.random_var_freq);
     reportf("\n");
     reportf("  -dimacs        = <output-file>.\n");
+    reportf("  -aiger         = <output-file>.\n");
     reportf("  -verbosity     = {0,1,2}             (default: %d)\n", S.verbosity);
     reportf("\n");
 }
@@ -106,8 +108,10 @@ int main(int argc, char** argv)
 #endif
     bool           pre    = true;
     const char*    dimacs = NULL;
+    const char*    aiger  = NULL;
     SimpSolver     S;
     S.verbosity = 1;
+    bool           clausify_naive = false;
 
     // Check for help flag:
     for (int i = 0; i < argc; i++)
@@ -143,6 +147,8 @@ int main(int argc, char** argv)
 
         // Boolean flags:
         //
+        }else if (strcmp(argv[i], "-clausify-naive") == 0){
+            clausify_naive = true;
         }else if (strcmp(argv[i], "-pre") == 0){
             pre = true;
         }else if (strcmp(argv[i], "-no-pre") == 0){
@@ -173,6 +179,8 @@ int main(int argc, char** argv)
             S.clause_lim = lim;
         }else if ((value = hasPrefix(argv[i], "-dimacs="))){
             dimacs = value;
+        }else if ((value = hasPrefix(argv[i], "-aiger="))){
+            aiger = value;
         }else if (strncmp(argv[i], "-", 1) == 0){
             reportf("ERROR! unknown flag %s\nUse -help for more information.\n", argv[i]);
             exit(0);
@@ -210,11 +218,24 @@ int main(int argc, char** argv)
         reportf("|  Number of inputs:     %12d                                         |\n", c.nInps());
         reportf("|  Number of gates:      %12d                                         |\n", c.nGates());
 
+        if (aiger != NULL){
+            reportf("==============================[ Writing AIGER ]================================\n");
+            writeAiger(aiger, c, inputs, latch_defs, outputs);
+            exit(0);
+        }
+
         vec<Lit> unit;
-        Clausifyer<SimpSolver> cl(c, S);
-        unit.push(cl.clausify(outputs[0]));
-        S.addClause(unit);
+        if (clausify_naive){
+            NaiveClausifyer<SimpSolver> cl(c, S);
+            unit.push(cl.clausify(outputs[0]));
+        }else {
+            Clausifyer<SimpSolver> cl(c, S);
+            cl.prepare();
+            unit.push(cl.clausify(outputs[0]));
+        }
         assert(S.okay());
+        assert(S.value(unit.last()) == l_Undef);
+        S.addClause(unit);
 
         reportf("|  Number of variables:  %12d                                         |\n", S.nVars());
         reportf("|  Number of clauses:    %12d                                         |\n", S.nClauses());

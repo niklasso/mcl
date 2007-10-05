@@ -53,36 +53,11 @@ class Clausifyer
 
     GMap<int>  n_fanouts;
 
-
-    // -------------------------------------------------------------------------------------------
-    // Calculate number of fanouts, and initialize maps:
-    //
-    void initializeHelper(Gate g){
-        seen     .growTo(g, 0);
-        vmap     .growTo(g, var_Undef);
-        n_fanouts.growTo(g, 0);
-
-        if (seen[g] == 0 && type(g) == gtype_And){
-            seen[g] = 1;
-            marked.push(g);
-            Gate lc = gate(circ.lchild(g));
-            Gate rc = gate(circ.rchild(g));
-            initializeHelper(lc);
-            initializeHelper(rc);
-            n_fanouts[lc]++;
-            n_fanouts[rc]++;
-        }
-    }
-
-    void initialize(Gate g){
-        marked.clear();
-        initializeHelper(g);
-        for (int i = 0; i < marked.size(); i++)
-            seen[marked[i]] = 0;
-    }
-
     // -------------------------------------------------------------------------------------------
     // Collect big conjunctions:
+    //
+    // NOTE! It uses n_fanouts merely as a guide as to whether a node should be introduced or not.
+    //       I.e. it does not matter for correctness if this information is 100% accurate.
     //
     void gatherBigAndHelper(Sig x, vec<Sig>& conj){
         Gate g = gate(x);
@@ -90,7 +65,7 @@ class Clausifyer
         if (seen[g] == 0){
             seen[g] = 1;
             marked.push(g);
-
+            
             if (type(g) == gtype_And && n_fanouts[g] == 1 && !sign(x)){
                 gatherBigAndHelper(circ.lchild(g), conj);
                 gatherBigAndHelper(circ.rchild(g), conj);
@@ -114,19 +89,13 @@ class Clausifyer
     //
     Lit clausifyHelper(Sig  x){ return mkLit(clausifyHelper(gate(x)), sign(x)); }
     Var clausifyHelper(Gate g){
-        //printf("<clausifying gate %d>\n", index(g));
+        assert(g != gate_True);
         if (vmap[g] == var_Undef){
             vmap[g] = solver.newVar();
             
             if (type(g) == gtype_And){
                 vec<Sig> big_and;
                 gatherBigAnd(mkSig(g), big_and);
-
-                //printf("gate %d is big-and of: ", index(g));
-                //for (int i = 0; i < big_and.size(); i++)
-                //    printf("%s%d ", sign(big_and[i])?"~":"", index(gate(big_and[i])));
-                //printf("\n");
-
                 Lit lg = mkLit(vmap[g]);
                 vec<Lit> lits;
                 for (int i = 0; i < big_and.size(); i++){
@@ -147,9 +116,22 @@ class Clausifyer
  public:
     Clausifyer(Circ& c, S& s) : circ(c), solver(s) {}
 
-    Var  clausify      (Gate g){ n_fanouts.clear(); initialize(g); return clausifyHelper(g); }
+    Var  clausify      (Gate g){ return clausifyHelper(g); }
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
     void addConstraints()      { circ.addConstraints(solver, vmap); }
+
+    void prepare       () {
+        n_fanouts.clear();
+        n_fanouts.growTo(circ.maxGate(), 0);
+        vmap     .growTo(circ.maxGate(), var_Undef);
+        seen     .growTo(circ.maxGate(), 0);
+
+        for (Gate g = circ.firstGate(); g != gate_Undef; g = circ.nextGate(g))
+            if (type(g) == gtype_And){
+                n_fanouts[gate(circ.lchild(g))]++;
+                n_fanouts[gate(circ.rchild(g))]++;
+            }
+    }
 };
 
 
@@ -158,7 +140,7 @@ class Clausifyer
 
 
 template<class S>
-class BasicClausifyer
+class NaiveClausifyer
 {
     Circ&      circ;
     S&         solver;
@@ -167,7 +149,7 @@ class BasicClausifyer
     vec<Lit>   tmp_lits;
 
  public:
-    BasicClausifyer(Circ& c, S& s) : circ(c), solver(s) {}
+    NaiveClausifyer(Circ& c, S& s) : circ(c), solver(s) {}
 
     Lit clausify(Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
     Var clausify(Gate g){
