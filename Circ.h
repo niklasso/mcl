@@ -148,6 +148,8 @@ Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
+void unitPropagate(Circ& c, const vec<Sig>& top_conjunction, GMap<Sig>& prop_map);
+
 //=================================================================================================
 // Implementation of inline methods:
 

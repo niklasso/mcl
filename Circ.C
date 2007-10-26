@@ -154,8 +154,21 @@ void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset)
 
 
 //=================================================================================================
+// Propagate unit facts, and simplify the circuit reachable from some node in the top-level 
+// conjunction:
+//
+
+
+void unitPropagate(Circ& c, const vec<Sig>& top_conjunction, GMap<Sig>& prop_map)
+{
+    // TODO:
+}
+
+
+//=================================================================================================
 // Copy the fan-in of signals, from one circuit to another:
 //
+
 static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map);
 static inline Sig _copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_map){ return _copyGate(src, dst, gate(x), copy_map) ^ sign(x); }
 static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map)
