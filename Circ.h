@@ -82,16 +82,13 @@ class Circ
     void         restrashAll ();
 
  public:
-    Circ() : next_id(1), tmp_gate(gate_True), gate_hash(Hash(gates)), gate_eq(Eq(gates)), n_inps(0), n_ands(0), strash(NULL), strash_cap(0) 
-        { 
-            gates.growTo(tmp_gate); 
-            restrashAll();
-            gates[tmp_gate].strash_next = gate_Undef;
-        }
+    Circ();
 
-    int size  () const { return gates.size()-1; }
-    int nGates() const { return n_ands; }
-    int nInps () const { return n_inps; }
+    void clear ();
+
+    int  size  () const { return gates.size()-1; }
+    int  nGates() const { return n_ands; }
+    int  nInps () const { return n_inps; }
 
     // Gate iterator:
     Gate nextGate (Gate g) const { 
@@ -102,6 +99,8 @@ class Circ
         return (index(g) == (unsigned)gates.size() || deleted[g]) ? gate_Undef : g; }
     Gate firstGate()       const { return nextGate(mkGate(0, idType(0))); }
     Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
+
+    Gate gateFromId (unsigned int id) const { return mkGate(id, idType(id)); }
 
 
     // Node constructor functions:
@@ -150,6 +149,11 @@ void bottomUpOrder(Circ& c, Sig  x, GSet& gset);
 void bottomUpOrder(Circ& c, const vec<Gate>& gs, GSet& gset);
 void bottomUpOrder(Circ& c, const vec<Sig>&  xs, GSet& gset);
 void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset);
+
+
+Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
+Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
+void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
 //=================================================================================================
 // Implementation of inline methods:
