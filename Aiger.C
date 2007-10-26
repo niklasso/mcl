@@ -71,6 +71,8 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
     if (max_var != n_inputs + n_latches + n_gates)
         fprintf(stderr, "ERROR! Header mismatching sizes (M != I + L + A)\n"), exit(1);
 
+    inputs.clear(); latch_defs.clear(); outputs.clear();
+
     vec<Sig> id2sig(max_var, sig_Undef);
 
     // Create input gates:
