@@ -191,13 +191,16 @@ int main(int argc, char** argv)
 
     double initial_time = cpuTime();
 
+    // S.oblivious_mode = true;
     if (!pre) S.eliminate(true);
 
     solver = &S;
     signal(SIGINT,SIGINT_handler);
     signal(SIGHUP,SIGINT_handler);
 
-    if (argc != 2)
+    vec<Var> input_vars;
+
+    if (argc < 2 || argc > 3)
         printUsage(argv, S), exit(1);
     else {
         reportf("============================[ Problem Statistics ]=============================\n");
@@ -218,6 +221,9 @@ int main(int argc, char** argv)
         reportf("|  Number of inputs:     %12d                                         |\n", c.nInps());
         reportf("|  Number of gates:      %12d                                         |\n", c.nGates());
 
+        double parsed_time = cpuTime();
+        reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+
         if (aiger != NULL){
             reportf("==============================[ Writing AIGER ]================================\n");
             writeAiger(aiger, c, inputs, latch_defs, outputs);
@@ -228,10 +234,18 @@ int main(int argc, char** argv)
         if (clausify_naive){
             NaiveClausifyer<SimpSolver> cl(c, S);
             unit.push(cl.clausify(outputs[0]));
+            for (int i = 0; i < inputs.size(); i++){
+                Lit p = cl.clausify(inputs[i]);
+                assert(!sign(p));
+                input_vars.push(var(p)); }
         }else {
             Clausifyer<SimpSolver> cl(c, S);
             cl.prepare();
             unit.push(cl.clausify(outputs[0]));
+            for (int i = 0; i < inputs.size(); i++){
+                Lit p = cl.clausify(inputs[i]);
+                assert(!sign(p));
+                input_vars.push(var(p)); }
         }
         assert(S.okay());
         assert(S.value(unit.last()) == l_Undef);
@@ -239,17 +253,26 @@ int main(int argc, char** argv)
 
         reportf("|  Number of variables:  %12d                                         |\n", S.nVars());
         reportf("|  Number of clauses:    %12d                                         |\n", S.nClauses());
+
+        double clausify_time = cpuTime();
+        reportf("|  Clausify time:        %12.2f s                                       |\n", clausify_time - parsed_time);
     }
 
-    double parsed_time = cpuTime();
-    reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+    // Freeze input vars:
+    //for (int i = 0; i < input_vars.size(); i++)
+    //    S.setFrozen(input_vars[i], true);
 
-    S.eliminate(true);
-    double simplified_time = cpuTime();
-    reportf("|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
+    if (pre){
+        double simplified_time_before = cpuTime();
+        S.eliminate(true);
+        reportf("|  Simplification time:  %12.2f s                                       |\n", cpuTime() - simplified_time_before);
+    }
     reportf("|                                                                             |\n");
 
+    FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+
     if (!S.okay()){
+        if (res != NULL) fprintf(res, "0\n"), fclose(res);
         reportf("===============================================================================\n");
         reportf("Solved by simplification\n");
         printStats(S);
@@ -268,6 +291,23 @@ int main(int argc, char** argv)
         printStats(S);
         reportf("\n");
         printf(ret ? "SATISFIABLE\n" : "UNSATISFIABLE\n");
+        if (res != NULL){
+            if (ret){
+                fprintf(res, "1\n");
+                for (int i = 0; i < input_vars.size(); i++){
+                    Var inp = input_vars[i];
+                    if (S.model[inp] == l_Undef)
+                        fprintf(res, "x");
+                    else if (S.model[inp] == l_True)
+                        fprintf(res, "1");
+                    else
+                        fprintf(res, "0");
+                }
+                fprintf(res, "\n");
+            }else
+                fprintf(res, "0\n");
+            fclose(res);
+        }
 #ifdef NDEBUG
         exit(ret ? 10 : 20);     // (faster than "return", which will invoke the destructor for 'Solver')
 #endif
