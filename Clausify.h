@@ -112,7 +112,6 @@ class Clausifyer
 
     Var  clausify      (Gate g){ return clausifyHelper(g); }
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
-    void addConstraints()      { circ.addConstraints(solver, vmap); }
 
     void prepare       () {
         n_fanouts.clear();

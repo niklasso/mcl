@@ -43,7 +43,6 @@ void Circ::clear(){
     gates.clear();
     free_ids.clear();
     deleted.clear();
-    constraints.clear();
     next_id = 0;
     n_inps = 0;
     n_ands = 0;

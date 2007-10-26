@@ -70,8 +70,6 @@ class Circ
     Gate*               strash;
     unsigned int        strash_cap;
     
-    vec<vec<Sig> > constraints;
-
     // Private methods:
     unsigned int allocId();
     void         freeId (unsigned int id);
@@ -114,11 +112,6 @@ class Circ
     // De-allocation:
     void freeGate(Gate g); 
 
-    // Add extra implications:
-    void constrain(const vec<Sig>& xs) { constraints.push(); xs.copyTo(constraints.last()); }
-    template<class Solver>
-    void addConstraints(Solver& S, GMap<Var>& vmap);
-    
     // Node inspection functions:
     Sig lchild(Gate g) const;
     Sig rchild(Gate g) const;
@@ -262,38 +255,6 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
 
     return mkSig(g);
 }
-
-template<class Solver>
-void Circ::addConstraints(Solver& S, GMap<Var>& vmap)
-{
-    int cnt = 0;
-
-    for (int i = 0; i < constraints.size(); i++){
-        vec<Sig>& constr = constraints[i];
-        vec<Lit>  clause;
-
-        for (int j = 0; j < constr.size(); j++){
-            vmap.growTo(gate(constr[j]), var_Undef);
-            if (vmap[gate(constr[j])] == var_Undef)
-                goto undefined;
-            else
-                clause.push(mkLit(vmap[gate(constr[j])], sign(constr[j])));
-        }
-
-        cnt++;
-        S.addClause(clause);
-        if (i+1 < constraints.size()){
-            constraints.last().moveTo(constr);
-            constraints.pop();
-            i--;
-        }
-
-    undefined:
-        ;
-    }
-    printf("Added %d extra constraints (%d left)\n", cnt, constraints.size());
-}
-
 
 //=================================================================================================
 // Debug etc:

@@ -37,15 +37,6 @@ void fullAdder(Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry)
     Sig w = c.mkXorEven(x, y);
     sum   = c.mkXorEven(w, z);
     carry = c.mkOr(c.mkAnd(x, y), c.mkAnd(z, w));
-
-    Sig x_and_y = c.mkAnd(x, y);
-    vec<Sig> constr;
-    constr.push(~sum);
-    constr.push(~carry);
-    constr.push(z);
-    c.constrain(constr);
-    constr.last() = x_and_y;
-    c.constrain(constr);
 }
 
 
@@ -303,7 +294,6 @@ void factorize64(uint64_t number)
         Lit  p     = cl.clausify(result[i]);
         vec<Lit> tmp; tmp.push(p ^ !value); s.addClause(tmp);
     }
-    //cl.addConstraints();
 
     printf("factorizing: %lld - binary: ", number);
     for (int i = binary_number.size()-1; i >= 0; i--)
@@ -350,7 +340,6 @@ void factorize64squarer(uint64_t number)
         Lit  p     = cl.clausify(result[i]);
         vec<Lit> tmp; tmp.push(p ^ !value); s.addClause(tmp);
     }
-    //cl.addConstraints();
 
     printf("factorizing: %lld - binary: ", number);
     for (int i = binary_number.size()-1; i >= 0; i--)
