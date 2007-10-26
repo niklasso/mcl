@@ -28,6 +28,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 template<class S>
 void add2Clause(Lit x, Lit y, S& solver, vec<Lit>& tmp) { 
+    // printf(" [%s%d, %s%d]\n", sign(x)?"~":"", var(x), sign(y)?"~":"", var(y));
     tmp.clear(); tmp.push(x); tmp.push(y); solver.addClause(tmp); }
 
 template<class S>
@@ -47,9 +48,7 @@ class Clausifyer
     GMap<Var>  vmap;
 
     vec<Lit>   tmp_lits;
-
-    GMap<char> seen;
-    vec<Gate>  marked;
+    SSet       tmp_big_and;
 
     GMap<int>  n_fanouts;
 
@@ -60,15 +59,12 @@ class Clausifyer
     //       I.e. it does not matter for correctness if this information is 100% accurate.
     //
     void gatherBigAndHelper(Sig x, vec<Sig>& conj){
-        Gate g = gate(x);
-
-        if (seen[g] == 0){
-            seen[g] = 1;
-            marked.push(g);
+        if (!tmp_big_and.has(x)){
+            tmp_big_and.insert(x);
             
-            if (type(g) == gtype_And && n_fanouts[g] == 1 && !sign(x)){
-                gatherBigAndHelper(circ.lchild(g), conj);
-                gatherBigAndHelper(circ.rchild(g), conj);
+            if (type(x) == gtype_And && n_fanouts[gate(x)] == 1 && !sign(x)){
+                gatherBigAndHelper(circ.lchild(x), conj);
+                gatherBigAndHelper(circ.rchild(x), conj);
             } else
                 conj.push(x);
         }
@@ -76,12 +72,9 @@ class Clausifyer
 
     void gatherBigAnd(Sig x, vec<Sig>& conj){
         assert(type(x) == gtype_And);
-        marked.clear();
-        conj.clear();
+        tmp_big_and.clear(); conj.clear();
         gatherBigAndHelper(circ.lchild(x), conj);
         gatherBigAndHelper(circ.rchild(x), conj);
-        for (int i = 0; i < marked.size(); i++)
-            seen[marked[i]] = 0;
     }
 
     // -------------------------------------------------------------------------------------------
@@ -96,6 +89,7 @@ class Clausifyer
             if (type(g) == gtype_And){
                 vec<Sig> big_and;
                 gatherBigAnd(mkSig(g), big_and);
+
                 Lit lg = mkLit(vmap[g]);
                 vec<Lit> lits;
                 for (int i = 0; i < big_and.size(); i++){
@@ -124,7 +118,6 @@ class Clausifyer
         n_fanouts.clear();
         n_fanouts.growTo(circ.maxGate(), 0);
         vmap     .growTo(circ.maxGate(), var_Undef);
-        seen     .growTo(circ.maxGate(), 0);
 
         for (Gate g = circ.firstGate(); g != gate_Undef; g = circ.nextGate(g))
             if (type(g) == gtype_And){
