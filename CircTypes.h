@@ -90,8 +90,7 @@ inline unsigned int index (Sig s) { return s.x >> 1; }
 // Map-types:
 
 template<class T>
-class GMap 
-  : private vec<T>
+class GMap : private vec<T>
 {
  public:
     // Vector interface:
@@ -127,7 +126,7 @@ class SMap : private vec<T>
 
 
 //=================================================================================================
-// Ordered set-type: (intantiateable with Sig or Gate)
+// Ordered set-types:
 
 class GSet
 {
@@ -137,7 +136,14 @@ class GSet
  public:
     // Size operations:
     int      size        (void)      const  { return gs.size(); }
-    void     clear       (bool free = false){ gs.clear(free); in_set.clear(free); }
+    void     clear       (bool free = false){ 
+        if (free)
+            in_set.clear(true); 
+        else
+            for (int i = 0; i < gs.size(); i++)
+                in_set[gs[i]] = 0;
+        gs.clear(free);
+    }
     
     // Vector interface:
     Gate     operator [] (int index) const  { return gs[index]; }
@@ -145,6 +151,32 @@ class GSet
 
     void     insert      (Gate g) { in_set.growTo(g, 0); if (!in_set[g]) { in_set[g] = 1; gs.push(g); } }
     bool     has         (Gate g) { in_set.growTo(g, 0); return in_set[g]; }
+};
+
+
+class SSet
+{
+    SMap<char> in_set;
+    vec<Sig>   xs;
+
+ public:
+    // Size operations:
+    int      size        (void)      const  { return xs.size(); }
+    void     clear       (bool free = false){ 
+        if (free) 
+            in_set.clear(true);
+        else 
+            for (int i = 0; i < xs.size(); i++)
+                in_set[xs[i]] = 0;
+        xs.clear(free);
+    }
+    
+    // Vector interface:
+    Sig      operator [] (int index) const  { return xs[index]; }
+
+
+    void     insert      (Sig  x) { in_set.growTo(x, 0); if (!in_set[x]) { in_set[x] = 1; xs.push(x); } }
+    bool     has         (Sig  x) { in_set.growTo(x, 0); return in_set[x]; }
 };
 
 //=================================================================================================
