@@ -124,7 +124,7 @@ class Circ
 // A simple container for circuit bindings, i.e. variable/definition pairs:
 
 struct Def {
-    Sig var; // type must be gtype_Inp;
+    Sig var; // type must be gtype_Inp; (Don't remember why is it not a Gate?)
     Sig def;
 };
 
@@ -148,7 +148,7 @@ Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
-void unitPropagate(Circ& c, const vec<Sig>& top_conjunction, GMap<Sig>& prop_map);
+void buildFanout(Circ& c, Gate g, Fanout& fout);
 
 //=================================================================================================
 // Implementation of inline methods:

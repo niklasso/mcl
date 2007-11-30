@@ -158,10 +158,55 @@ void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset)
 // conjunction:
 //
 
+#if 0
+// static inline void bind(Gate g, Sig x, GMap<Sig>& prop_map, Queue<Sig>& queue)
+// {
+//     while (prop_map[g] != sig_Undef) g = prop_map[g];
+//     prop_map[g] = x;
+//     queue.insert(g);
+// }
 
-void unitPropagate(Circ& c, const vec<Sig>& top_conjunction, GMap<Sig>& prop_map)
+
+static void substitute(Circ& c, Gate g, Sig x, Fanout& fout)
 {
-    // TODO:
+    vec<Def> bindings; bindings.push(Def(g, x));
+
+    while (bindings.size() > 0){
+        Gate g = bindings.last().var;
+        Sig  x = bindings.last().def;
+        bindings.pop();
+
+        for (int i = 0; i < fout[g].size(); i++){
+            Gate h = fout[g][i];
+            Sig  y = c.updateGate(h, g, x);
+
+            if (y != sig_Undef) bindings.push(Def(h, y));
+        }
+    }
+}
+#endif
+
+
+// Not correct yet: May introduce duplicates for top-nodes (at least).
+//
+// (Move this into the Fanout-class?)
+//
+void buildFanout(Circ& c, Gate g, Fanout& fout)
+{
+    fout.growTo(g);
+
+    if (fout[g].size() == 0){
+        Gate l, r;
+        
+        l = gate(c.lchild(g));
+        r = gate(c.rchild(g));
+
+        fout.attach(l, g);
+        fout.attach(r, g);
+
+        buildFanout(c, l, fout);
+        buildFanout(c, r, fout);
+    }
 }
 
 
