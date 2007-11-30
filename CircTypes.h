@@ -180,4 +180,25 @@ class SSet
 };
 
 //=================================================================================================
+// Fanout type:
+
+
+class Fanout : private GMap<vec<Gate> >
+{
+
+ public:
+    // Vector interface:
+    vec<Gate>&       operator [] (Gate g)       { return ((vec<vec<Gate> >&)(*this))[index(g)]; }
+    const vec<Gate>& operator [] (Gate g) const { return ((const vec<vec<Gate> >&)(*this))[index(g)]; }
+
+    // Note the slightly different semantics to vec's growTo, namely that
+    // this guarantees that the element 'g' can be indexed after this operation.
+    void     growTo (Gate g)             { ((vec<vec<Gate> >&)(*this)).growTo(index(g) + 1   ); }
+    void     clear  (bool free = false)  { ((vec<vec<Gate> >&)(*this)).clear(free); }
+
+    void     attach (Gate from, Gate to) {(*this)[from].push(to);}
+};
+
+
+//=================================================================================================
 #endif
