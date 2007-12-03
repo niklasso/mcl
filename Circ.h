@@ -57,12 +57,11 @@ class Circ
     };
 
     // Member variables:
+    //
     Gates               gates;
     unsigned int        next_id;
-    vec<unsigned int>   free_ids;
     Gate                tmp_gate;
     GMap<char>          deleted;
-
     Hash                gate_hash;
     Eq                  gate_eq;
     unsigned int        n_inps;
@@ -71,8 +70,8 @@ class Circ
     unsigned int        strash_cap;
     
     // Private methods:
+    //
     unsigned int allocId();
-    void         freeId (unsigned int id);
     GateType     idType (unsigned int id) const { return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 
     void         strashInsert(Gate g);
@@ -150,32 +149,28 @@ void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_ma
 
 void buildFanout(Circ& c, Gate g, Fanout& fout);
 
+
 //=================================================================================================
 // Implementation of inline methods:
 
 inline unsigned int Circ::allocId()
 {
     unsigned int id;
-    if (free_ids.size() > 0){
-        // There are recyclable indices:
-        id = free_ids.last();
-        free_ids.pop();
-    }else{
-        // Must choose a new index, and adjust map-size of 'gates':
-        id = next_id++;
-        gates.  growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
-        deleted.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp), 0);
-    }
+    // Choose a new index, and adjust map-size of 'gates':
+    id = next_id++;
+    gates.  growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
+    deleted.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp), 0);
 
     return id;
 }
-inline void Circ::freeId(unsigned int id){ free_ids.push(id); }
+
+
 inline void Circ::freeGate(Gate g){ 
     if (type(g) == gtype_Inp) n_inps--; else n_ands--;
     deleted.growTo(g, 0);
     deleted[g] = 1;
-    freeId(index(g));
 }
+
 
 //=================================================================================================
 // Implementation of strash-functions:

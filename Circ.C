@@ -41,7 +41,6 @@ Circ::Circ()
 
 void Circ::clear(){
     gates.clear();
-    free_ids.clear();
     deleted.clear();
     next_id = 0;
     n_inps = 0;

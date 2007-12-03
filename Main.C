@@ -74,7 +74,7 @@ void printUsage(char** argv, SimpSolver& S)
     reportf("\n");
     reportf("  -dimacs        = <output-file>.\n");
     reportf("  -aiger         = <output-file>.\n");
-    reportf("  -verbosity     = {0,1,2}             (default: %d)\n", S.verbosity);
+    reportf("  -verb          = {0,1,2}             (default: %d)\n", S.verbosity);
     reportf("\n");
 }
 
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
                 exit(0); }
             S.var_decay = 1 / decay;
 
-        }else if ((value = hasPrefix(argv[i], "-verbosity="))){
+        }else if ((value = hasPrefix(argv[i], "-verb="))){
             int verbosity = (int)strtol(value, NULL, 10);
             if (verbosity == 0 && errno == EINVAL){
                 reportf("ERROR! illegal verbosity level %s\n", value);
@@ -219,6 +219,7 @@ int main(int argc, char** argv)
             fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", outputs.size()), exit(1);
 
         reportf("|  Number of inputs:     %12d                                         |\n", c.nInps());
+        reportf("|  Number of outputs:    %12d                                         |\n", outputs.size());
         reportf("|  Number of gates:      %12d                                         |\n", c.nGates());
 
         double parsed_time = cpuTime();
@@ -233,7 +234,14 @@ int main(int argc, char** argv)
         vec<Lit> unit;
         if (clausify_naive){
             NaiveClausifyer<SimpSolver> cl(c, S);
-            unit.push(cl.clausify(outputs[0]));
+            for (int i = 0; i < outputs.size(); i++){
+                unit.clear();
+                unit.push(cl.clausify(outputs[i]));
+                assert(S.okay());
+                assert(S.value(unit.last()) == l_Undef);
+                S.addClause(unit);
+            }
+
             for (int i = 0; i < inputs.size(); i++){
                 Lit p = cl.clausify(inputs[i]);
                 assert(!sign(p));
@@ -241,15 +249,25 @@ int main(int argc, char** argv)
         }else {
             Clausifyer<SimpSolver> cl(c, S);
             cl.prepare();
-            unit.push(cl.clausify(outputs[0]));
+#if 0
+            for (int i = 0; i < outputs.size(); i++){
+                unit.clear();
+                unit.push(cl.clausify(outputs[i]));
+                assert(S.okay());
+                assert(S.value(unit.last()) == l_Undef);
+                S.addClause(unit);
+            }
+#else
+            for (int i = 0; i < outputs.size(); i++)
+                cl.assume(outputs[i]);
+            
+#endif
+
             for (int i = 0; i < inputs.size(); i++){
                 Lit p = cl.clausify(inputs[i]);
                 assert(!sign(p));
                 input_vars.push(var(p)); }
         }
-        assert(S.okay());
-        assert(S.value(unit.last()) == l_Undef);
-        S.addClause(unit);
 
         reportf("|  Number of variables:  %12d                                         |\n", S.nVars());
         reportf("|  Number of clauses:    %12d                                         |\n", S.nClauses());
