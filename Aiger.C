@@ -52,7 +52,7 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
 
     StreamBuffer in(f);
 
-    if (!match(in, "aig "))
+    if (!eagerMatch(in, "aig "))
         fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *in), exit(1);
 
     int max_var   = parseInt(in);
@@ -125,6 +125,8 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
     // Map latches:
     for (int i = 0; i < aiger_latch_defs.size(); i++)
         latch_defs[i].def = aigToSig(id2sig, aiger_latch_defs[i]);
+
+    gzclose(f);
 }
 
 
