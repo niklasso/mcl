@@ -180,7 +180,7 @@ void writeAiger(const char* filename, Circ& c, const vec<Sig>& inputs, const vec
 
     unsigned int n_gates = uporder.size() - n_inputs - n_latches;
 
-    GMap<unsigned int> gate2id; gate2id.growTo(c.maxGate());
+    GMap<unsigned int> gate2id; c.adjustMapSize(gate2id);
     for (int i = 0; i < uporder.size(); i++)
         gate2id[uporder[i]] = i + 1;
 

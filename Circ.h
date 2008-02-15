@@ -72,8 +72,15 @@ class Circ
     // Gate iterator:
     Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
     Gate firstGate()       const { return nextGate(gateFromId(0)); }
-    Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
 
+    // Adjust map size:
+    template<class T>
+    void adjustMapSize(GMap<T>& map, const T& def = T()) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), def); }
+    template<class T>
+    void adjustMapSize(SMap<T>& map, const T& def = T()) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
+
+    // Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
+    
 
 
     // Node constructor functions:

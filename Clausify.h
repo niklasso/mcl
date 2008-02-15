@@ -158,8 +158,8 @@ class Clausifyer
 
     void prepare       () {
         n_fanouts.clear();
-        n_fanouts.growTo(circ.maxGate(), 0);
-        vmap     .growTo(circ.maxGate(), var_Undef);
+        circ.adjustMapSize(n_fanouts, 0);
+        circ.adjustMapSize(vmap, var_Undef);
 
         for (Gate g = circ.firstGate(); g != gate_Undef; g = circ.nextGate(g))
             if (type(g) == gtype_And){
