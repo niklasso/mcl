@@ -37,46 +37,28 @@ class Circ
     struct GateData { Gate strash_next; Sig x, y; };
     typedef GMap<GateData> Gates;
 
-    struct Eq { 
-        const Gates& gs; 
-        Eq(const Gates& gs_) : gs(gs_) {}
-        bool operator()(Gate x, Gate y) const { 
-            assert(type(x) == gtype_And);
-            assert(type(y) == gtype_And);
-            //printf("checking %d : %c%d, %c%d\n", index(x), sign(gs[x].x)?' ':'-', index(gate(gs[x].x)), sign(gs[x].y)?' ':'-', index(gate(gs[x].y)));
-            //printf("    ---- %d : %c%d, %c%d\n", index(y), sign(gs[y].x)?' ':'-', index(gate(gs[y].x)), sign(gs[y].y)?' ':'-', index(gate(gs[y].y)));
-            return gs[x].x == gs[y].x && gs[x].y == gs[y].y; }
-    };
-
-    struct Hash { 
-        const Gates& gs; 
-        Hash(const Gates& gs_) : gs(gs_) {}
-        uint32_t operator()(Gate x) const { 
-            assert(type(x) == gtype_And);
-            return index(gs[x].x) * pair_hash_prime + index(gs[x].y); }
-    };
-
     // Member variables:
     //
-    Gates               gates;
-    unsigned int        next_id;
-    Gate                tmp_gate;
-    GMap<char>          deleted;
-    Hash                gate_hash;
-    Eq                  gate_eq;
+    Gates               gates;        // Gates[0] is reserved for the constant gate_True.
+
     unsigned int        n_inps;
     unsigned int        n_ands;
     Gate*               strash;
     unsigned int        strash_cap;
+
+    Gate                tmp_gate;
     
     // Private methods:
     //
-    unsigned int allocId();
-    GateType     idType (unsigned int id) const { return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
-
+    unsigned int allocId     ();
+    GateType     idType      (unsigned int id) const;
+    uint32_t     gateHash    (Gate g)          const;
+    bool         gateEq      (Gate x, Gate y)  const;
     void         strashInsert(Gate g);
-    Gate         strashFind  (Gate g);
+    Gate         strashFind  (Gate g)          const;
     void         restrashAll ();
+
+    Gate         gateFromId  (unsigned int id) const { return mkGate(id, idType(id)); }
 
  public:
     Circ();
@@ -88,16 +70,10 @@ class Circ
     int  nInps () const { return n_inps; }
 
     // Gate iterator:
-    Gate nextGate (Gate g) const { 
-        if (g == gate_Undef) return gate_Undef;
-        assert(index(g) < (unsigned int)gates.size());
-        do g = mkGate(index(g)+1, idType(index(g)+1)); 
-        while ((int)index(g) < gates.size() && deleted[g]);
-        return (index(g) == (unsigned)gates.size() || deleted[g]) ? gate_Undef : g; }
-    Gate firstGate()       const { return nextGate(mkGate(0, idType(0))); }
+    Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
+    Gate firstGate()       const { return nextGate(gateFromId(0)); }
     Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
 
-    Gate gateFromId (unsigned int id) const { return mkGate(id, idType(id)); }
 
 
     // Node constructor functions:
@@ -108,9 +84,6 @@ class Circ
     Sig mkXorEven(Sig x, Sig y);
     Sig mkXor    (Sig x, Sig y);
     
-    // De-allocation:
-    void freeGate(Gate g); 
-
     // Node inspection functions:
     Sig lchild(Gate g) const;
     Sig rchild(Gate g) const;
@@ -155,33 +128,43 @@ void buildFanout(Circ& c, Gate g, Fanout& fout);
 
 inline unsigned int Circ::allocId()
 {
-    unsigned int id;
-    // Choose a new index, and adjust map-size of 'gates':
-    id = next_id++;
-    gates.  growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
-    deleted.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp), 0);
-
+    uint32_t id = gates.size();
+    gates.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
+    assert((uint32_t)gates.size() == id + 1);
     return id;
 }
 
 
-inline void Circ::freeGate(Gate g){ 
-    if (type(g) == gtype_Inp) n_inps--; else n_ands--;
-    deleted.growTo(g, 0);
-    deleted[g] = 1;
-}
+inline GateType Circ::idType(unsigned int id) const { 
+    return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 
 
 //=================================================================================================
 // Implementation of strash-functions:
 
+inline uint32_t Circ::gateHash(Gate g) const
+{
+    assert(type(g) == gtype_And);
+    return index(gates[g].x) * pair_hash_prime + index(gates[g].y); 
+}
 
-inline Gate Circ::strashFind  (Gate g)
+
+inline bool Circ::gateEq(Gate x, Gate y) const
+{
+    assert(type(x) == gtype_And);
+    assert(type(y) == gtype_And);
+    //printf("checking %d : %c%d, %c%d\n", index(x), sign(gs[x].x)?' ':'-', index(gate(gs[x].x)), sign(gs[x].y)?' ':'-', index(gate(gs[x].y)));
+    //printf("    ---- %d : %c%d, %c%d\n", index(y), sign(gs[y].x)?' ':'-', index(gate(gs[y].x)), sign(gs[y].y)?' ':'-', index(gate(gs[y].y)));
+    return gates[x].x == gates[y].x && gates[x].y == gates[y].y;
+}
+
+
+inline Gate Circ::strashFind  (Gate g) const
 {
     assert(type(g) == gtype_And);
     Gate h;
     //printf("searching for gate:\n");
-    for (h = strash[gate_hash(g) % strash_cap]; h != gate_Undef && !gate_eq(h, g); h = gates[h].strash_next){
+    for (h = strash[gateHash(g) % strash_cap]; h != gate_Undef && !gateEq(h, g); h = gates[h].strash_next){
         //printf(" --- inspecting gate: %d\n", index(h));
         assert(type(h) == gtype_And);
     }
@@ -194,7 +177,7 @@ inline void Circ::strashInsert(Gate g)
     assert(type(g) == gtype_And);
     assert(g != tmp_gate);
     assert(strashFind(g) == gate_Undef);
-    uint32_t pos = gate_hash(g) % strash_cap;
+    uint32_t pos = gateHash(g) % strash_cap;
     assert(strash[pos] != g);
     gates[g].strash_next = strash[pos];
     strash[pos] = g;

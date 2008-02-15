@@ -24,14 +24,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 
 Circ::Circ() 
-    : next_id(1)
-    , tmp_gate(gate_True)
-    , gate_hash(Hash(gates))
-    , gate_eq(Eq(gates))
-    , n_inps(0) 
+    : n_inps(0) 
     , n_ands(0)
     , strash(NULL)
     , strash_cap(0) 
+    , tmp_gate(gate_True)
 { 
     gates.growTo(tmp_gate); 
     restrashAll();
@@ -41,8 +38,6 @@ Circ::Circ()
 
 void Circ::clear(){
     gates.clear();
-    deleted.clear();
-    next_id = 0;
     n_inps = 0;
     n_ands = 0;
     if (strash) free(strash);
