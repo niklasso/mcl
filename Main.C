@@ -17,30 +17,32 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "SimpSolver.h"
-#include "Circ.h"
-#include "Clausify.h"
-#include "Aiger.h"
-#include "System.h"
-
 #include <cstdio>
 #include <cstring>
 
 #include <errno.h>
 #include <signal.h>
 
+#include "Options.h"
+#include "System.h"
+#include "SimpSolver.h"
+#include "Circ.h"
+#include "Clausify.h"
+#include "Aiger.h"
+
+
 //=================================================================================================
 
 
-void printStats(Solver& S)
+void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsed();
-    reportf("restarts              : %lld\n", S.starts);
-    reportf("conflicts             : %-12lld   (%.0f /sec)\n", S.conflicts   , S.conflicts   /cpu_time);
-    reportf("decisions             : %-12lld   (%4.2f %% random) (%.0f /sec)\n", S.decisions, (float)S.rnd_decisions*100 / (float)S.decisions, S.decisions   /cpu_time);
-    reportf("propagations          : %-12lld   (%.0f /sec)\n", S.propagations, S.propagations/cpu_time);
-    reportf("conflict literals     : %-12lld   (%4.2f %% deleted)\n", S.tot_literals, (S.max_literals - S.tot_literals)*100 / (double)S.max_literals);
+    reportf("restarts              : %"PRIu64"\n", solver.starts);
+    reportf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
+    reportf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
+    reportf("propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
+    reportf("conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
     if (mem_used != 0) reportf("Memory used           : %.2f MB\n", mem_used);
     reportf("CPU time              : %g s\n", cpu_time);
 }
@@ -57,141 +59,29 @@ static void SIGINT_handler(int signum) {
 // Main:
 
 
-void printUsage(char** argv, SimpSolver& S)
-{
-    reportf("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n\n", argv[0]);
-    reportf("OPTIONS:\n\n");
-    reportf("  -clausify-naive                      (default: off)\n");
-    reportf("  -pre,    -no-pre                     (default: on)\n");
-    reportf("  -elim,   -no-elim                    (default: %s)\n", S.use_elim           ? "on" : "off");
-    reportf("  -asymm,  -no-asymm                   (default: %s)\n", S.use_asymm          ? "on" : "off");
-    reportf("  -rcheck, -no-rcheck                  (default: %s)\n", S.use_rcheck         ? "on" : "off");
-    reportf("\n");
-    reportf("  -grow          = <integer> [ >= 0  ] (default: %d)\n", S.grow);
-    reportf("  -lim           = <integer> [ >= -1 ] (default: %d)\n", S.clause_lim);
-    reportf("  -decay         = <double>  [ 0 - 1 ] (default: %g)\n", S.var_decay);
-    reportf("  -rnd-freq      = <double>  [ 0 - 1 ] (default: %g)\n", S.random_var_freq);
-    reportf("\n");
-    reportf("  -dimacs        = <output-file>.\n");
-    reportf("  -aiger         = <output-file>.\n");
-    reportf("  -verb          = {0,1,2}             (default: %d)\n", S.verbosity);
-    reportf("\n");
-}
-
-const char* hasPrefix(const char* str, const char* prefix)
-{
-    int len = strlen(prefix);
-    if (strncmp(str, prefix, len) == 0)
-        return str + len;
-    else
-        return NULL;
-}
-
-
-
-
-
 int main(int argc, char** argv)
 {
-    //basicCircTest();
-    //fullAdderCorrect();
-    //multiplierCorrect(4);
-    //if (argc == 2)
-    //    factorize64(atoll(argv[1]));
+    setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input is in plain or gzipped binary AIGER.\n");
+    reportf("Using MiniSat 2.0 beta\n");
 
-
-    reportf("This is MiniSat 2.0 beta\n");
 #if defined(__linux__)
     fpu_control_t oldcw, newcw;
     _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
     reportf("WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
-    bool           pre    = true;
-    const char*    dimacs = NULL;
-    const char*    aiger  = NULL;
-    SimpSolver     S;
-    S.verbosity = 1;
-    bool           clausify_naive = false;
 
-    // Check for help flag:
-    for (int i = 0; i < argc; i++)
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0){
-            printUsage(argv, S);
-            exit(0); }
-
-    // This just grew and grew, and I didn't have time to do sensible argument parsing yet :)
+    // Extra options:
     //
-    int         i, j;
-    const char* value;
-    for (i = j = 0; i < argc; i++){
-        if ((value = hasPrefix(argv[i], "-rnd-freq="))){
-            double rnd;
-            if (sscanf(value, "%lf", &rnd) <= 0 || rnd < 0 || rnd > 1){
-                reportf("ERROR! illegal rnd-freq constant %s\n", value);
-                exit(0); }
-            S.random_var_freq = rnd;
+    BoolOption   pre            ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+    BoolOption   clausify_naive ("MAIN", "clausify-naive", "Use naive clausification", false);
+    StringOption aiger          ("MAIN", "aiger",  "If given, stop after preprocessing AIG and write the result to this file.");
+    StringOption dimacs         ("MAIN", "dimacs", "If given, stop after producing CNF and write the result to this file.");
 
-        }else if ((value = hasPrefix(argv[i], "-decay="))){
-            double decay;
-            if (sscanf(value, "%lf", &decay) <= 0 || decay <= 0 || decay > 1){
-                reportf("ERROR! illegal decay constant %s\n", value);
-                exit(0); }
-            S.var_decay = 1 / decay;
+    parseOptions(argc, argv, true);
 
-        }else if ((value = hasPrefix(argv[i], "-verb="))){
-            int verbosity = (int)strtol(value, NULL, 10);
-            if (verbosity == 0 && errno == EINVAL){
-                reportf("ERROR! illegal verbosity level %s\n", value);
-                exit(0); }
-            S.verbosity = verbosity;
+    SimpSolver S;
+    double     initial_time = cpuTime();
 
-        // Boolean flags:
-        //
-        }else if (strcmp(argv[i], "-clausify-naive") == 0){
-            clausify_naive = true;
-        }else if (strcmp(argv[i], "-pre") == 0){
-            pre = true;
-        }else if (strcmp(argv[i], "-no-pre") == 0){
-            pre = false;
-        }else if (strcmp(argv[i], "-asymm") == 0){
-            S.use_asymm = true;
-        }else if (strcmp(argv[i], "-no-asymm") == 0){
-            S.use_asymm = false;
-        }else if (strcmp(argv[i], "-rcheck") == 0){
-            S.use_rcheck = true;
-        }else if (strcmp(argv[i], "-no-rcheck") == 0){
-            S.use_rcheck = false;
-        }else if (strcmp(argv[i], "-elim") == 0){
-            S.use_elim = true;
-        }else if (strcmp(argv[i], "-no-elim") == 0){
-            S.use_elim = false;
-        }else if ((value = hasPrefix(argv[i], "-grow="))){
-            int grow = (int)strtol(value, NULL, 10);
-            if (grow < 0){
-                reportf("ERROR! illegal grow constant %s\n", &argv[i][6]);
-                exit(0); }
-            S.grow = grow;
-        }else if ((value = hasPrefix(argv[i], "-lim="))){
-            int lim = (int)strtol(value, NULL, 10);
-            if (lim < 3){
-                reportf("ERROR! illegal clause limit constant %s\n", &argv[i][5]);
-                exit(0); }
-            S.clause_lim = lim;
-        }else if ((value = hasPrefix(argv[i], "-dimacs="))){
-            dimacs = value;
-        }else if ((value = hasPrefix(argv[i], "-aiger="))){
-            aiger = value;
-        }else if (strncmp(argv[i], "-", 1) == 0){
-            reportf("ERROR! unknown flag %s\nUse -help for more information.\n", argv[i]);
-            exit(0);
-        }else
-            argv[j++] = argv[i];
-    }
-    argc = j;
-
-    double initial_time = cpuTime();
-
-    // S.oblivious_mode = true;
     if (!pre) S.eliminate(true);
 
     solver = &S;
@@ -201,7 +91,7 @@ int main(int argc, char** argv)
     vec<Var> input_vars;
 
     if (argc < 2 || argc > 3)
-        printUsage(argv, S), exit(1);
+        printUsageAndExit(argc, argv);
     else {
         reportf("============================[ Problem Statistics ]=============================\n");
         reportf("|                                                                             |\n");
