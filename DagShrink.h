@@ -1,5 +1,5 @@
-/*****************************************************************************************[Aiger.h]
-Copyright (c) 2007, Niklas Sorensson
+/*************************************************************************************[DagShrink.h]
+Copyright (c) 2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -17,25 +17,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Aiger_h
-#define Aiger_h
+#ifndef DagShrink_h
+#define DagShrink_h
 
 #include "Circ.h"
+#include "Aiger.h"
 
-//=================================================================================================
-// Functions for parsing and printing circuits in the AIGER format. See <http://fmv.jku.at/aiger/>
-// for specification of this format as well as supporting tools and example circuits.
+Sig  dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
+void dagShrink(AigerCirc& c, double& rnd_seed);
 
-struct AigerCirc {
-    Circ       circ;
-    vec<Gate>  inputs;
-    vec<Gate>  latches;
-    vec<Sig>   outputs;
-    GMap<Sig>  latch_defs;
-};
-
-void readAiger (const char* filename, AigerCirc& c);
-void writeAiger(const char* filename, const AigerCirc& c);
-
-//=================================================================================================
 #endif

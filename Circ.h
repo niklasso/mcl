@@ -22,6 +22,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "CircTypes.h"
 #include "SolverTypes.h"
+#include "Queue.h"
+#include "Sort.h"
 
 #include <cstdio>
 
@@ -40,6 +42,7 @@ class Circ
     // Member variables:
     //
     Gates               gates;        // Gates[0] is reserved for the constant gate_True.
+    GMap<uint8_t>       n_fanouts;
 
     unsigned int        n_inps;
     unsigned int        n_ands;
@@ -47,6 +50,10 @@ class Circ
     unsigned int        strash_cap;
 
     Gate                tmp_gate;
+
+    GSet                tmp_set;
+    vec<Sig>            tmp_stack;
+    GMap<int>           tmp_fanouts;
     
     // Private methods:
     //
@@ -64,10 +71,12 @@ class Circ
     Circ();
 
     void clear ();
+    void moveTo(Circ& to);
 
     int  size  () const { return gates.size()-1; }
     int  nGates() const { return n_ands; }
     int  nInps () const { return n_inps; }
+    int  nFanouts(Gate g) const { return n_fanouts[g]; }
 
     // Gate iterator:
     Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
@@ -79,10 +88,6 @@ class Circ
     template<class T>
     void adjustMapSize(SMap<T>& map, const T& def = T()) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
 
-    // Gate maxGate  ()       const { return mkGate(gates.size()-1, gtype_Inp); }
-    
-
-
     // Node constructor functions:
     Sig mkInp    ();
     Sig mkAnd    (Sig x, Sig y);
@@ -90,22 +95,32 @@ class Circ
     Sig mkXorOdd (Sig x, Sig y);
     Sig mkXorEven(Sig x, Sig y);
     Sig mkXor    (Sig x, Sig y);
+    Sig mkMuxOdd (Sig x, Sig y, Sig z);
+    Sig mkMuxEven(Sig x, Sig y, Sig z);
+    Sig mkMux    (Sig x, Sig y, Sig z);
     
     // Node inspection functions:
     Sig lchild(Gate g) const;
     Sig rchild(Gate g) const;
     Sig lchild(Sig x)  const;
     Sig rchild(Sig x)  const;
+
+    // Pattern matching functions:
+    bool matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z);
+    bool matchMux (Gate g, Sig& x, Sig& y, Sig& z);
+    bool matchXor (Gate g, Sig& x, Sig& y);
+    bool matchXors(Gate g, vec<Sig>& xs);
+    void matchAnds(Gate g, vec<Sig>& xs);
+
+    // Lookup wether different different patterns already exists somewhere:
+    Sig tryAnd     (Sig x, Sig y);
+    int costAnd    (Sig x, Sig y);
+    int costXorOdd (Sig x, Sig y);
+    int costXorEven(Sig x, Sig y);
+    int costMuxOdd (Sig x, Sig y, Sig z);
+    int costMuxEven(Sig x, Sig y, Sig z);
 };
 
-
-//=================================================================================================
-// A simple container for circuit bindings, i.e. variable/definition pairs:
-
-struct Def {
-    Sig var; // type must be gtype_Inp; (Don't remember why is it not a Gate?)
-    Sig def;
-};
 
 //=================================================================================================
 // Circ utility functions:
@@ -115,20 +130,26 @@ struct Def {
 // of a signal:
 bool evaluate(const Circ& c, Sig x, GMap<lbool>& values);
 
-
-void bottomUpOrder(Circ& c, Gate g, GSet& gset);
-void bottomUpOrder(Circ& c, Sig  x, GSet& gset);
-void bottomUpOrder(Circ& c, const vec<Gate>& gs, GSet& gset);
-void bottomUpOrder(Circ& c, const vec<Sig>&  xs, GSet& gset);
-void bottomUpOrder(Circ& c, const vec<Def>& latch_defs, GSet& gset);
-
+void bottomUpOrder(const Circ& c, Gate g, GSet& gset);
+void bottomUpOrder(const Circ& c, Sig  x, GSet& gset);
+void bottomUpOrder(const Circ& c, const vec<Gate>& gs, GSet& gset);
+void bottomUpOrder(const Circ& c, const vec<Sig>&  xs, GSet& gset);
+void bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& latch_defs, GSet& gset);
 
 Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
-void buildFanout(Circ& c, Gate g, Fanout& fout);
+void normalizeAnds(vec<Sig>& xs);
+void normalizeXors(vec<Sig>& xs);
 
+bool matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
+bool matchMux (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z);
+bool matchXor (const Circ& c, Gate g, Sig& x, Sig& y);
+bool matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs);
+void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs);
+
+void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
 //=================================================================================================
 // Implementation of inline methods:
@@ -136,7 +157,9 @@ void buildFanout(Circ& c, Gate g, Fanout& fout);
 inline unsigned int Circ::allocId()
 {
     uint32_t id = gates.size();
-    gates.growTo(mkGate(id, /* doesn't matter which type */ gtype_Inp));
+    Gate     g  = mkGate(id, /* doesn't matter which type */ gtype_Inp);
+    gates.growTo(g);
+    n_fanouts.growTo(g, 0);
     assert((uint32_t)gates.size() == id + 1);
     return id;
 }
@@ -145,6 +168,12 @@ inline unsigned int Circ::allocId()
 inline GateType Circ::idType(unsigned int id) const { 
     return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 
+
+inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return ::matchMuxParts(*this, g, h, x, y, z); }
+inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return ::matchMux(*this, g, x, y, z); }
+inline bool Circ::matchXor (Gate g, Sig& x, Sig& y) { return ::matchXor(*this, g, x, y); }
+inline bool Circ::matchXors(Gate g, vec<Sig>& xs) { return ::matchXors(*this, g, tmp_stack, xs); }
+inline void Circ::matchAnds(Gate g, vec<Sig>& xs) { ::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs); }
 
 //=================================================================================================
 // Implementation of strash-functions:
@@ -202,6 +231,9 @@ inline Sig  Circ::mkOr     (Sig x, Sig y){ return ~mkAnd(~x, ~y); }
 inline Sig  Circ::mkXorOdd (Sig x, Sig y){ return mkOr (mkAnd(x, ~y), mkAnd(~x, y)); }
 inline Sig  Circ::mkXorEven(Sig x, Sig y){ return mkAnd(mkOr(~x, ~y), mkOr ( x, y)); }
 inline Sig  Circ::mkXor    (Sig x, Sig y){ return mkXorEven(x, y); }
+inline Sig  Circ::mkMuxOdd (Sig x, Sig y, Sig z) { return mkOr (mkAnd( x, y), mkAnd(~x, z)); }
+inline Sig  Circ::mkMuxEven(Sig x, Sig y, Sig z) { return mkAnd(mkOr (~x, y), mkOr ( x, z)); }
+inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
 
 inline Sig  Circ::mkAnd (Sig x, Sig y){
     // Simplify:
@@ -228,11 +260,16 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
         gates[g].x = x;
         gates[g].y = y;
         n_ands++;
-
+        
+        // Insert into strash map:
         if (n_ands > strash_cap / 2)
             restrashAll();
         else
             strashInsert(g);
+
+        // Update fanout counters:
+        if (n_fanouts[gate(x)] < 255) n_fanouts[gate(x)]++;
+        if (n_fanouts[gate(y)] < 255) n_fanouts[gate(y)]++;
 
         // fprintf(stderr, "created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
         //printf(" -- created new node.\n");
@@ -242,6 +279,62 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
 
     return mkSig(g);
 }
+
+inline Sig Circ::tryAnd(Sig x, Sig y)
+{
+    assert(gate(x) != gate_True);
+    assert(gate(y) != gate_True);
+
+    // Order:
+    if (y < x) { Sig tmp = x; x = y; y = tmp; }
+
+    // Strash-lookup:
+    Gate g = tmp_gate;
+    gates[g].x = x;
+    gates[g].y = y;
+
+    return mkSig(strashFind(g));
+}
+
+
+inline int Circ::costAnd (Sig x, Sig y)
+{
+    return tryAnd(x, y) == sig_Undef ? 1 : 0;
+}
+
+
+inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
+{
+    // return mkOr (mkAnd( x, y), mkAnd(~x, z));
+    Sig a = tryAnd( x, y);
+    Sig b = tryAnd(~x, z);
+    Sig c = sig_Undef;
+
+    if (a != sig_Undef && b != sig_Undef)
+        c = tryAnd(~a, ~b);
+
+    return (int)(a == sig_Undef) + (int)(b == sig_Undef) + (int)(c == sig_Undef);
+}
+
+
+inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
+{
+    // return mkAnd(mkOr (~x, y), mkOr ( x, z));
+
+    Sig a = tryAnd( x, ~y);
+    Sig b = tryAnd(~x,  z);
+    Sig c = sig_Undef;
+
+    if (a != sig_Undef && b != sig_Undef)
+        c = tryAnd(~a, ~b);
+
+    return (int)(a == sig_Undef) + (int)(b == sig_Undef) + (int)(c == sig_Undef);
+}
+
+
+inline int Circ::costXorOdd (Sig x, Sig y){ return costMuxOdd (x, ~y, y); }
+inline int Circ::costXorEven(Sig x, Sig y){ return costMuxEven(x, ~y, y); }
+
 
 //=================================================================================================
 // Debug etc:

@@ -43,7 +43,7 @@ static Sig aigToSig(vec<Sig>& id2sig, int aiger_lit) {
 }
 
 
-void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch_defs, vec<Sig>& outputs)
+void readAiger (const char* filename, AigerCirc& c)
 {
     gzFile f = gzopen(filename, "rb");
 
@@ -71,22 +71,26 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
     if (max_var != n_inputs + n_latches + n_gates)
         fprintf(stderr, "ERROR! Header mismatching sizes (M != I + L + A)\n"), exit(1);
 
-    inputs.clear(); latch_defs.clear(); outputs.clear();
+    c.circ.clear();
+    c.inputs.clear();
+    c.latches.clear();
+    c.outputs.clear();
+    c.latch_defs.clear();
 
     vec<Sig> id2sig(max_var, sig_Undef);
 
     // Create input gates:
     for (int i = 0; i < n_inputs; i++){
-        Sig x = c.mkInp();
-        inputs.push(x);
+        Sig x = c.circ.mkInp();
+        c.inputs.push(gate(x));
         id2sig[i+1] = x;
     }
 
     // Create latch gates:
     for (int i = 0; i < n_latches; i++){
-        Def d = { c.mkInp(), sig_Undef };
-        latch_defs.push(d);
-        id2sig[i+n_inputs+1] = d.var;
+        Sig x = c.circ.mkInp();
+        c.latches.push(gate(x));
+        id2sig[i+n_inputs+1] = x;
     }
 
     vec<unsigned int> aiger_outputs;
@@ -111,7 +115,7 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
 
         // fprintf(stderr, "read gate %d = %d & %d\n", 2*i, x, y);
 
-        id2sig[i]       = c.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
+        id2sig[i]       = c.circ.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
 
         assert   ((int)delta0 < 2*i);
         assert   (delta1 <= 2*i - delta0);
@@ -120,11 +124,12 @@ void readAiger (const char* filename, Circ& c, vec<Sig>& inputs, vec<Def>& latch
 
     // Map outputs:
     for (int i = 0; i < aiger_outputs.size(); i++)
-        outputs.push(aigToSig(id2sig, aiger_outputs[i]));
+        c.outputs.push(aigToSig(id2sig, aiger_outputs[i]));
 
     // Map latches:
+    c.circ.adjustMapSize(c.latch_defs, sig_Undef);
     for (int i = 0; i < aiger_latch_defs.size(); i++)
-        latch_defs[i].def = aigToSig(id2sig, aiger_latch_defs[i]);
+        c.latch_defs[c.latches[i]] = aigToSig(id2sig, aiger_latch_defs[i]);
 
     gzclose(f);
 }
@@ -152,35 +157,37 @@ static unsigned int sigToAig(GMap<unsigned int>& gate2id, Sig x) {
 }
 
 
-void writeAiger(const char* filename, Circ& c, const vec<Sig>& inputs, const vec<Def>& latch_defs, const vec<Sig>& outputs)
+void writeAiger(const char* filename, const AigerCirc& c)
 {
     // fprintf(stderr, "aig %u %u %u %d %d\n", c.size(), inputs.size(), latch_defs.size(), outputs.size(), c.nGates());
 
     // Generate the set of reachable gates:
-    GSet reachable; bottomUpOrder(c, outputs, reachable); bottomUpOrder(c, latch_defs, reachable);
+    GSet reachable; 
+    bottomUpOrder(c.circ, c.outputs, reachable); 
+    bottomUpOrder(c.circ, c.latches, c.latch_defs, reachable);
 
     unsigned int n_inputs = 0, n_latches = 0;
 
     // Generate the same set, but in an order compatible with the AIGER format:
     GSet uporder;
-    for (int i = 0; i < inputs.size(); i++)
-        if (reachable.has(gate(inputs[i])))
-            n_inputs++, uporder.insert(gate(inputs[i]));
+    for (int i = 0; i < c.inputs.size(); i++)
+        if (reachable.has(c.inputs[i]))
+            n_inputs++, uporder.insert(c.inputs[i]);
 
-    vec<Def> ls;
-    for (int i = 0; i < latch_defs.size(); i++)
-        if (reachable.has(gate(latch_defs[i].var))){
+    vec<Gate> ls;
+    for (int i = 0; i < c.latches.size(); i++)
+        if (reachable.has(c.latches[i])){
             n_latches++; 
-            ls.push(latch_defs[i]);
-            uporder.insert(gate(latch_defs[i].var));
+            ls.push(c.latches[i]);
+            uporder.insert(c.latches[i]);
         }
 
-    bottomUpOrder(c, outputs, uporder);
-    bottomUpOrder(c, latch_defs, uporder);
+    bottomUpOrder(c.circ, c.outputs, uporder);
+    bottomUpOrder(c.circ, c.latches, c.latch_defs, uporder);
 
     unsigned int n_gates = uporder.size() - n_inputs - n_latches;
 
-    GMap<unsigned int> gate2id; c.adjustMapSize(gate2id);
+    GMap<unsigned int> gate2id; c.circ.adjustMapSize(gate2id);
     for (int i = 0; i < uporder.size(); i++)
         gate2id[uporder[i]] = i + 1;
 
@@ -190,22 +197,22 @@ void writeAiger(const char* filename, Circ& c, const vec<Sig>& inputs, const vec
         fprintf(stderr, "ERROR! Could not open file <%s> for writing\n", filename), exit(1);
 
     // fprintf(stderr, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, outputs.size(), n_gates);
-    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, outputs.size(), n_gates);
+    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, c.outputs.size(), n_gates);
 
     // Write latch-defs:
     for (int i = 0; i < ls.size(); i++)
-        fprintf(f, "%u\n", sigToAig(gate2id, ls[i].def));
+        fprintf(f, "%u\n", sigToAig(gate2id, c.latch_defs[ls[i]]));
 
     // Write outputs:
-    for (int i = 0; i < outputs.size(); i++)
-        fprintf(f, "%u\n", sigToAig(gate2id, outputs[i]));
+    for (int i = 0; i < c.outputs.size(); i++)
+        fprintf(f, "%u\n", sigToAig(gate2id, c.outputs[i]));
 
     // Write gates:
     for (int i = 0; i < (int)n_gates; i++){
         Gate         g    = uporder[n_inputs + n_latches + i];     assert(type(g) == gtype_And);
         unsigned int glit = (n_inputs + n_latches + i + 1) << 1;
-        unsigned int llit = sigToAig(gate2id, c.lchild(g));
-        unsigned int rlit = sigToAig(gate2id, c.rchild(g));
+        unsigned int llit = sigToAig(gate2id, c.circ.lchild(g));
+        unsigned int rlit = sigToAig(gate2id, c.circ.rchild(g));
 
         if (llit < rlit){
             unsigned int tmp = llit; llit = rlit; rlit = tmp; }

@@ -104,6 +104,8 @@ class GMap : private vec<T>
 
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
+
+    void     moveTo (GMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
 };
 
 
@@ -177,26 +179,6 @@ class SSet
 
     void     insert      (Sig  x) { in_set.growTo(x, 0); if (!in_set[x]) { in_set[x] = 1; xs.push(x); } }
     bool     has         (Sig  x) { in_set.growTo(x, 0); return in_set[x]; }
-};
-
-//=================================================================================================
-// Fanout type:
-
-
-class Fanout : private GMap<vec<Gate> >
-{
-
- public:
-    // Vector interface:
-    vec<Gate>&       operator [] (Gate g)       { return ((vec<vec<Gate> >&)(*this))[index(g)]; }
-    const vec<Gate>& operator [] (Gate g) const { return ((const vec<vec<Gate> >&)(*this))[index(g)]; }
-
-    // Note the slightly different semantics to vec's growTo, namely that
-    // this guarantees that the element 'g' can be indexed after this operation.
-    void     growTo (Gate g)             { ((vec<vec<Gate> >&)(*this)).growTo(index(g) + 1   ); }
-    void     clear  (bool free = false)  { ((vec<vec<Gate> >&)(*this)).clear(free); }
-
-    void     attach (Gate from, Gate to) {(*this)[from].push(to);}
 };
 
 

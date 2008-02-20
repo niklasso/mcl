@@ -96,67 +96,70 @@ int main(int argc, char** argv)
         reportf("============================[ Problem Statistics ]=============================\n");
         reportf("|                                                                             |\n");
 
-        Circ     c; 
-        vec<Sig> inputs;
-        vec<Sig> outputs;
-        vec<Def> latch_defs;
-        readAiger(argv[1], c, inputs, latch_defs, outputs);
+        AigerCirc c;
+        readAiger(argv[1], c);
 
-        if (latch_defs.size() > 0)
+        if (c.latches.size() > 0)
             fprintf(stderr, "ERROR! Sequential circuits not supported!\n"), exit(1);
 
-        if (outputs.size() != 1)
-            fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", outputs.size()), exit(1);
+        if (c.outputs.size() != 1)
+            fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", c.outputs.size()), exit(1);
 
-        reportf("|  Number of inputs:     %12d                                         |\n", c.nInps());
-        reportf("|  Number of outputs:    %12d                                         |\n", outputs.size());
-        reportf("|  Number of gates:      %12d                                         |\n", c.nGates());
+        reportf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
+        reportf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
+        reportf("|  Number of gates:      %12d                                         |\n", c.circ.nGates());
 
         double parsed_time = cpuTime();
         reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
+        { 
+            GSet reach; 
+            int  n_xors = 0, n_muxes = 0, n_ands = 0, tot_ands = 0;
+            circInfo(c.circ, gate(c.outputs[0]), reach, n_ands, n_xors, n_muxes, tot_ands);
+            reportf("|  Number of xors:       %12d                                         |\n", n_xors);
+            reportf("|  Number of muxes:      %12d                                         |\n", n_muxes);
+            reportf("|  Number of big-ands:   %12d ( %5.2f avg. size )                     |\n", n_ands, (float)tot_ands / n_ands);
+        }
+
         if (aiger != NULL){
             reportf("==============================[ Writing AIGER ]================================\n");
-            writeAiger(aiger, c, inputs, latch_defs, outputs);
+            writeAiger(aiger, c);
             exit(0);
         }
 
         vec<Lit> unit;
         if (clausify_naive){
-            NaiveClausifyer<SimpSolver> cl(c, S);
-            for (int i = 0; i < outputs.size(); i++){
+            NaiveClausifyer<SimpSolver> cl(c.circ, S);
+            for (int i = 0; i < c.outputs.size(); i++){
                 unit.clear();
-                unit.push(cl.clausify(outputs[i]));
+                unit.push(cl.clausify(c.outputs[i]));
                 assert(S.okay());
                 assert(S.value(unit.last()) == l_Undef);
                 S.addClause(unit);
             }
 
-            for (int i = 0; i < inputs.size(); i++){
-                Lit p = cl.clausify(inputs[i]);
-                assert(!sign(p));
-                input_vars.push(var(p)); }
+            for (int i = 0; i < c.inputs.size(); i++)
+                input_vars.push(cl.clausify(c.inputs[i])); 
+
         }else {
-            Clausifyer<SimpSolver> cl(c, S);
+            Clausifyer<SimpSolver> cl(c.circ, S);
             cl.prepare();
 #if 0
-            for (int i = 0; i < outputs.size(); i++){
+            for (int i = 0; i < c.outputs.size(); i++){
                 unit.clear();
-                unit.push(cl.clausify(outputs[i]));
+                unit.push(cl.clausify(c.outputs[i]));
                 assert(S.okay());
                 assert(S.value(unit.last()) == l_Undef);
                 S.addClause(unit);
             }
 #else
-            for (int i = 0; i < outputs.size(); i++)
-                cl.assume(outputs[i]);
+            for (int i = 0; i < c.outputs.size(); i++)
+                cl.assume(c.outputs[i]);
             
 #endif
 
-            for (int i = 0; i < inputs.size(); i++){
-                Lit p = cl.clausify(inputs[i]);
-                assert(!sign(p));
-                input_vars.push(var(p)); }
+            for (int i = 0; i < c.inputs.size(); i++)
+                input_vars.push(cl.clausify(c.inputs[i])); 
         }
 
         reportf("|  Number of variables:  %12d                                         |\n", S.nVars());

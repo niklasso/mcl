@@ -57,8 +57,6 @@ class Clausifyer
     vec<Sig>   tmp_sig_stack;
     vec<Sig>   tmp_big_and;
 
-    GMap<int>  n_fanouts;
-
     SSet       top_assumed;
 
     // -------------------------------------------------------------------------------------------
@@ -74,7 +72,8 @@ class Clausifyer
             if (!tmp_reached.has(x)){
                 tmp_reached.insert(x);
                 
-                if (type(x) == gtype_And && n_fanouts[gate(x)] == 1 && !sign(x)){
+                // if (type(x) == gtype_And && n_fanouts[gate(x)] == 1 && !sign(x)){
+                if (type(x) == gtype_And && circ.nFanouts(gate(x)) == 1 && !sign(x)){
                     tmp_sig_stack.push(circ.lchild(x));
                     tmp_sig_stack.push(circ.rchild(x));
                 } else
@@ -157,15 +156,7 @@ class Clausifyer
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
 
     void prepare       () {
-        n_fanouts.clear();
-        circ.adjustMapSize(n_fanouts, 0);
         circ.adjustMapSize(vmap, var_Undef);
-
-        for (Gate g = circ.firstGate(); g != gate_Undef; g = circ.nextGate(g))
-            if (type(g) == gtype_And){
-                n_fanouts[gate(circ.lchild(g))]++;
-                n_fanouts[gate(circ.rchild(g))]++;
-            }
     }
 
     void assume(Sig x){
