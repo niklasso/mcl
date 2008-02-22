@@ -26,4 +26,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 Sig  dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
 void dagShrink(AigerCirc& c, double& rnd_seed);
 
+void splitOutputs(AigerCirc& c);
+
 #endif

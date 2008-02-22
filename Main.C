@@ -29,7 +29,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Circ.h"
 #include "Clausify.h"
 #include "Aiger.h"
-
+#include "DagShrink.h"
 
 //=================================================================================================
 
@@ -102,8 +102,9 @@ int main(int argc, char** argv)
         if (c.latches.size() > 0)
             fprintf(stderr, "ERROR! Sequential circuits not supported!\n"), exit(1);
 
-        if (c.outputs.size() != 1)
-            fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", c.outputs.size()), exit(1);
+        //if (c.outputs.size() != 1)
+        //    fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", c.outputs.size()), exit(1);
+        splitOutputs(c);
 
         reportf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
         reportf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
@@ -115,7 +116,8 @@ int main(int argc, char** argv)
         { 
             GSet reach; 
             int  n_xors = 0, n_muxes = 0, n_ands = 0, tot_ands = 0;
-            circInfo(c.circ, gate(c.outputs[0]), reach, n_ands, n_xors, n_muxes, tot_ands);
+            for (int i = 0; i < c.outputs.size(); i++)
+                circInfo(c.circ, gate(c.outputs[i]), reach, n_ands, n_xors, n_muxes, tot_ands);
             reportf("|  Number of xors:       %12d                                         |\n", n_xors);
             reportf("|  Number of muxes:      %12d                                         |\n", n_muxes);
             reportf("|  Number of big-ands:   %12d ( %5.2f avg. size )                     |\n", n_ands, (float)tot_ands / n_ands);

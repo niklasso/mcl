@@ -430,3 +430,38 @@ void dagShrink(AigerCirc& c, double& rnd_seed)
         c.latch_defs[gate(x)] = d;
     }
 }
+
+
+//=================================================================================================
+// Breaking down big output conjunctions:
+//
+
+void splitOutputs(AigerCirc& c)
+{
+    SSet     all_outputs;
+    vec<Sig> xs;
+
+    for (int i = 0; i < c.outputs.size(); i++){
+        Sig x = c.outputs[i];
+
+        if (!sign(x) && type(x) == gtype_And && x != sig_True && x != sig_False){
+            c.circ.matchAnds(gate(x), xs);
+            fprintf(stderr, " >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
+            for (int j = 0; j < xs.size(); j++)
+                all_outputs.insert(xs[j]);
+
+            // fprintf(stderr, " >>> GATES = ");
+            // for (int j = 0; j < xs.size(); j++){
+            //     all_outputs.insert(xs[j]);
+            //     fprintf(stderr, "%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
+            // }
+            // fprintf(stderr, "\n");
+        }
+        else
+            all_outputs.insert(x);
+    }
+
+    c.outputs.clear();
+    for (int i = 0; i < all_outputs.size(); i++)
+        c.outputs.push(all_outputs[i]);
+}
