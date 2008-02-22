@@ -289,7 +289,7 @@ inline Sig Circ::tryAnd(Sig x, Sig y)
     if (y < x) { Sig tmp = x; x = y; y = tmp; }
 
     // Strash-lookup:
-    Gate g = tmp_gate;
+    Gate g = mkGate(index(tmp_gate), gtype_And);
     gates[g].x = x;
     gates[g].y = y;
 
@@ -322,7 +322,7 @@ inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
     // return mkAnd(mkOr (~x, y), mkOr ( x, z));
 
     Sig a = tryAnd( x, ~y);
-    Sig b = tryAnd(~x,  z);
+    Sig b = tryAnd(~x, ~z);
     Sig c = sig_Undef;
 
     if (a != sig_Undef && b != sig_Undef)
