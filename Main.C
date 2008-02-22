@@ -113,15 +113,9 @@ int main(int argc, char** argv)
         double parsed_time = cpuTime();
         reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
-        { 
-            GSet reach; 
-            int  n_xors = 0, n_muxes = 0, n_ands = 0, tot_ands = 0;
-            for (int i = 0; i < c.outputs.size(); i++)
-                circInfo(c.circ, gate(c.outputs[i]), reach, n_ands, n_xors, n_muxes, tot_ands);
-            reportf("|  Number of xors:       %12d                                         |\n", n_xors);
-            reportf("|  Number of muxes:      %12d                                         |\n", n_muxes);
-            reportf("|  Number of big-ands:   %12d ( %5.2f avg. size )                     |\n", n_ands, (float)tot_ands / n_ands);
-        }
+        double rnd_seed = 123456;
+        for (int i = 0; i < 5; i++)
+            dagShrink(c, rnd_seed);
 
         if (aiger != NULL){
             reportf("==============================[ Writing AIGER ]================================\n");

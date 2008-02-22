@@ -133,37 +133,22 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
 
     // Search for mux/xor structures:
     int found_muxes = 0;
-    if (xs.size() > 2) // This is a hack to improve statistics somewhat.
+    if (xs.size() > 2) // This is a hack to improve statistics somewhat. 
+                       // Might not be needed anymore.
 
         for (int i = 1; i < xs.size(); i++){
-            if (xs[i] == sig_Undef || !sign(xs[i]) || type(xs[i]) != gtype_And) continue;
+            if (xs[i] == sig_Undef || !sign(xs[i]) || type(xs[i]) != gtype_And || in.nFanouts(gate(xs[i])) != 0) continue;
             
             assert(gate(xs[i]) != gate_True);
             //for (int j = 0; j < i; j++){
             for (int j = 0; j < (i > cut_off ? cut_off : i); j++){
-                if (xs[j] == sig_Undef || !sign(xs[j]) || type(xs[j]) != gtype_And) continue;
+                if (xs[j] == sig_Undef || !sign(xs[j]) || type(xs[j]) != gtype_And || in.nFanouts(gate(xs[j])) != 0) continue;
                 
-                // FIXME: should we really pair together parts that have
-                // external fanouts? It is confusing, at least for the statistics. 
                 Sig x, y, z;
                 if (in.matchMuxParts(gate(xs[i]), gate(xs[j]), x, y, z)){
-                    /* 
-                       if (gate(x) == mkGate(79, gtype_Inp)){
-                       fprintf(stderr, " >>> FOUND MUX: %s%d, %s%s%d, %s%s%d\n", 
-                       type(x) == gtype_Inp ? "$" : "@", index(gate(x)), 
-                       sign(y)?"-":"", type(y) == gtype_Inp ? "$" : "@", index(gate(y)), 
-                       sign(z)?"-":"", type(z) == gtype_Inp ? "$" : "@", index(gate(z))
-                       );
-                       
-                       fprintf(stderr, " >>> CONTAINING CONJUNCTION: ");
-                       for (int i = 0; i < xs.size(); i++)
-                       fprintf(stderr, "%s%s%d ", sign(xs[i])?"-":"", type(xs[i]) == gtype_Inp ? "$" : "@", index(gate(xs[i])));
-                       fprintf(stderr, "\n");
-                       
-                       
-                       }
-                    */
+                    int gates_before = in.nGates();
                     xs.push(in.mkMux(x, y, z));
+                    assert(gates_before + 1 == in.nGates());
                     xs[i] = xs[j] = sig_Undef;
                     found_muxes++;
                     break;
@@ -210,15 +195,19 @@ static Sig rebuildXors(Circ& in, vec<Sig>& xs, double& rnd_seed)
             int cost_even = in.costXorEven(xs[i], xs[j]);
             int cost_odd  = in.costXorOdd (xs[i], xs[j]);
 
+            int gates_before = in.nGates();
+
             if (cost_even < 3 && cost_even <= cost_odd){
                 xs.push(in.mkXorEven(xs[i], xs[j]));
                 xs[i] = xs[j] = sig_Undef;
                 reused_nodes += 3 - cost_even;
+                assert(gates_before + cost_even == in.nGates());
                 break;
             }else if (cost_odd < 3){
                 xs.push(in.mkXorOdd(xs[i], xs[j]));
                 xs[i] = xs[j] = sig_Undef;
                 reused_nodes += 3 - cost_odd;
+                assert(gates_before + cost_odd == in.nGates());
                 break;
             }
         }
@@ -318,7 +307,7 @@ Sig dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed)
 
     if (in.matchXors(g, xs)){
         dagShrink(in, out, xs, map, rnd_seed);
-        normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
+        // normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
 
         nof_xor_nodes++; total_xor_size += xs.size();
         result = rebuildXors(out, xs, rnd_seed);
@@ -336,9 +325,8 @@ Sig dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed)
     }else if (type(g) == gtype_And){
         in.matchAnds(g, xs);
 
-        normalizeAnds(xs); // Remove redundancies so that dead parts of the circuit are not copied.
         dagShrink(in, out, xs, map, rnd_seed);
-        normalizeAnds(xs); // New redundancies may arise after recursive copying/shrinking.
+        // normalizeAnds(xs); // New redundancies may arise after recursive copying/shrinking.
 
         nof_and_nodes++; total_and_size += xs.size();
         result = rebuildAnds(out, xs, rnd_seed);
