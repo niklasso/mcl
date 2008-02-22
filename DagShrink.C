@@ -437,9 +437,10 @@ void dagShrink(AigerCirc& c, double& rnd_seed, bool only_copy)
 
 
 //=================================================================================================
-// Breaking down big output conjunctions:
+// Utility functions:
 //
 
+// Breaking down big output conjunctions:
 void splitOutputs(AigerCirc& c)
 {
     SSet     all_outputs;
@@ -474,6 +475,7 @@ void splitOutputs(AigerCirc& c)
 }
 
 
+// Remove logic not reachable from some output or latch:
 void removeDeadLogic(AigerCirc& c)
 {
     double dummy_seed = 123;
