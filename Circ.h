@@ -110,7 +110,7 @@ class Circ
     bool matchMux (Gate g, Sig& x, Sig& y, Sig& z);
     bool matchXor (Gate g, Sig& x, Sig& y);
     bool matchXors(Gate g, vec<Sig>& xs);
-    void matchAnds(Gate g, vec<Sig>& xs);
+    void matchAnds(Gate g, vec<Sig>& xs, bool match_muxes = false);
 
     // Lookup wether different different patterns already exists somewhere:
     Sig tryAnd     (Sig x, Sig y);
@@ -147,7 +147,7 @@ bool matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
 bool matchMux (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z);
 bool matchXor (const Circ& c, Gate g, Sig& x, Sig& y);
 bool matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs);
-void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs);
+void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes = false);
 
 void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
@@ -173,7 +173,7 @@ inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return
 inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return ::matchMux(*this, g, x, y, z); }
 inline bool Circ::matchXor (Gate g, Sig& x, Sig& y) { return ::matchXor(*this, g, x, y); }
 inline bool Circ::matchXors(Gate g, vec<Sig>& xs) { return ::matchXors(*this, g, tmp_stack, xs); }
-inline void Circ::matchAnds(Gate g, vec<Sig>& xs) { ::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs); }
+inline void Circ::matchAnds(Gate g, vec<Sig>& xs, bool match_muxes) { ::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs, match_muxes); }
 
 //=================================================================================================
 // Implementation of strash-functions:

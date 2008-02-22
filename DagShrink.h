@@ -23,9 +23,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Circ.h"
 #include "Aiger.h"
 
-Sig  dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
-void dagShrink(AigerCirc& c, double& rnd_seed);
+Sig  dagShrink       (Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
+void dagShrink       (AigerCirc& c, double& rnd_seed, bool only_copy = false);
 
-void splitOutputs(AigerCirc& c);
+void splitOutputs    (AigerCirc& c);
+void removeDeadLogic (AigerCirc& c);
 
 #endif

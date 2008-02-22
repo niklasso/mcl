@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Circ.h"
 #include "SolverTypes.h"
 
+// FIXME: handle constants !!!
 //=================================================================================================
 // Simple helpers:
 
@@ -60,39 +61,6 @@ class Clausifyer
     SSet       top_assumed;
 
     // -------------------------------------------------------------------------------------------
-    // Collect big conjunctions:
-    //
-    // NOTE! It uses n_fanouts merely as a guide as to whether a node should be introduced or not.
-    //       I.e. it does not matter for correctness if this information is 100% accurate.
-    //
-    void gatherBigAndIter(vec<Sig>& conj){
-        while (tmp_sig_stack.size() > 0){
-            Sig x = tmp_sig_stack.last(); tmp_sig_stack.pop();
-
-            if (!tmp_reached.has(x)){
-                tmp_reached.insert(x);
-                
-                // if (type(x) == gtype_And && n_fanouts[gate(x)] == 1 && !sign(x)){
-                if (type(x) == gtype_And && circ.nFanouts(gate(x)) == 1 && !sign(x)){
-                    tmp_sig_stack.push(circ.lchild(x));
-                    tmp_sig_stack.push(circ.rchild(x));
-                } else
-                    conj.push(x);
-            }
-        }
-    }
-
-    void gatherBigAnd(Sig x, vec<Sig>& conj){
-        assert(type(x) == gtype_And);
-        conj.clear();
-        tmp_reached.clear(); 
-        tmp_sig_stack.clear();
-        tmp_sig_stack.push(circ.lchild(x));
-        tmp_sig_stack.push(circ.rchild(x));
-        gatherBigAndIter(conj);
-    }
-
-    // -------------------------------------------------------------------------------------------
     // Clausify:
     //
     void clausifyIter(Gate g)
@@ -117,7 +85,7 @@ class Clausifyer
                     // Mark gate while traversing "downwards":
                     //
                     vmap[g] = -2;
-                    gatherBigAnd(mkSig(g), tmp_big_and);
+                    circ.matchAnds(g, tmp_big_and, true);
                     for (int i = 0; i < tmp_big_and.size(); i++)
                         stack.push(gate(tmp_big_and[i]));
                 }else if (vmap[g] == -2){
@@ -125,7 +93,7 @@ class Clausifyer
                     //
                     vmap[g] = solver.newVar();
                     Lit lg = mkLit(vmap[g]);
-                    gatherBigAnd(mkSig(g), tmp_big_and);
+                    circ.matchAnds(g, tmp_big_and, true);
 
                     // Implication(s) in one direction:
                     for (int i = 0; i < tmp_big_and.size(); i++){
@@ -164,36 +132,29 @@ class Clausifyer
         vec<Sig> disj;
         vec<Lit> lits;
 
-        tmp_sig_stack.clear();
-        tmp_sig_stack.push(x);
+        if (sign(x) || type(x) == gtype_Inp)
+            top.push(x);
+        else
+            circ.matchAnds(gate(x), top, true);
 
-        while (tmp_sig_stack.size() > 0){
-            x = tmp_sig_stack.last(); tmp_sig_stack.pop();
+        // if (top.size() > 1)
+        //     printf(" >>> Gathered %d top level gates\n", top.size());
 
-            if (!top_assumed.has(x)){
-                top_assumed.insert(x);
+        for (int i = 0; i < top.size(); i++)
+            if (!top_assumed.has(top[i])){
+                top_assumed.insert(top[i]);
                 
-                if (type(x) == gtype_Inp)
-                    add1Clause(clausify(x), solver, tmp_lits);
-                else if (!sign(x)){
-                    tmp_sig_stack.push(circ.lchild(x));
-                    tmp_sig_stack.push(circ.rchild(x));
-                } else
-                    top.push(x);
+                if (type(top[i]) == gtype_Inp || !sign(top[i]))
+                    add1Clause(clausify(top[i]), solver, tmp_lits);
+                else{
+
+                    circ.matchAnds(gate(top[i]), disj, true);
+                    lits.clear();
+                    for (int j = 0; j < disj.size(); j++)
+                        lits.push(clausify(~disj[j]));
+                    solver.addClause(lits);
+                }
             }
-        }
-        printf(" >>> Gathered %d top level gates\n", top.size());
-
-        for (int i = 0; i < top.size(); i++){
-            assert(sign(top[i]));
-
-            gatherBigAnd(top[i], disj);
-            
-            lits.clear();
-            for (int j = 0; j < disj.size(); j++)
-                lits.push(~clausify(disj[j]));
-            solver.addClause(lits);
-        }
     }
 };
 

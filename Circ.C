@@ -358,7 +358,7 @@ bool matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs)
 }
 
 
-void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs)
+void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
 {
     c.adjustMapSize(tmp_fanouts, 0);
     tmp_set.clear();
@@ -373,7 +373,7 @@ void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<i
         Sig x = tmp_stack[queue_head++];
 
         Sig tmp_x, tmp_y, tmp_z;
-        if (type(x) != gtype_And || sign(x) || matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
             continue;
 
         g = gate(x);

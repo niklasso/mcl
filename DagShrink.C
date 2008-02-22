@@ -377,7 +377,7 @@ void findDefs(AigerCirc& c)
 }
 
 
-void dagShrink(AigerCirc& c, double& rnd_seed)
+void dagShrink(AigerCirc& c, double& rnd_seed, bool only_copy)
 {
     Circ      tmp; 
     GMap<Sig> map;
@@ -389,15 +389,19 @@ void dagShrink(AigerCirc& c, double& rnd_seed)
     for (int i = 0; i < c.inputs.size(); i++)  map[c.inputs[i]]  = tmp.mkInp();
     for (int i = 0; i < c.latches.size(); i++) map[c.latches[i]] = tmp.mkInp();
 
-    clearDagShrinkStats();
+    if (!only_copy) clearDagShrinkStats();
     // Shrink circuit with roots in 'outputs' and 'latch_defs':
     for (int i = 0; i < c.outputs.size(); i++)
-        dagShrink(c.circ, tmp, gate(c.outputs[i]), map, rnd_seed);
+        if (only_copy) copyGate (c.circ, tmp, gate(c.outputs[i]), map);
+        else           dagShrink(c.circ, tmp, gate(c.outputs[i]), map, rnd_seed);
+
     for (int i = 0; i < c.latches.size(); i++)
-        dagShrink(c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map, rnd_seed);
-    total_nodes_before = c.circ.nGates();
-    total_nodes_after  = tmp.nGates();
-    printDagShrinkStats();
+        if (only_copy) copyGate (c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map);
+        else           dagShrink(c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map, rnd_seed);
+    if (!only_copy){
+        total_nodes_before = c.circ.nGates();
+        total_nodes_after  = tmp.nGates();
+        printDagShrinkStats(); }
 
     // Move circuit back:
     tmp.moveTo(c.circ);
@@ -444,9 +448,10 @@ void splitOutputs(AigerCirc& c)
     for (int i = 0; i < c.outputs.size(); i++){
         Sig x = c.outputs[i];
 
-        if (!sign(x) && type(x) == gtype_And && x != sig_True && x != sig_False){
-            c.circ.matchAnds(gate(x), xs);
-            fprintf(stderr, " >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
+        if (!sign(x) && type(x) == gtype_And){
+            c.circ.matchAnds(gate(x), xs, true);
+            // fprintf(stderr, " >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
+
             for (int j = 0; j < xs.size(); j++)
                 all_outputs.insert(xs[j]);
 
@@ -464,4 +469,13 @@ void splitOutputs(AigerCirc& c)
     c.outputs.clear();
     for (int i = 0; i < all_outputs.size(); i++)
         c.outputs.push(all_outputs[i]);
+
+    removeDeadLogic(c);
+}
+
+
+void removeDeadLogic(AigerCirc& c)
+{
+    double dummy_seed = 123;
+    dagShrink(c, dummy_seed, true);
 }
