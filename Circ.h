@@ -247,7 +247,7 @@ inline Sig  Circ::mkAnd (Sig x, Sig y){
     if (y < x) { Sig tmp = x; x = y; y = tmp; }
 
     // Strash-lookup:
-    Gate g = tmp_gate;
+    Gate g = mkGate(index(tmp_gate), gtype_And);
     gates[g].x = x;
     gates[g].y = y;
 

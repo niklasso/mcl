@@ -44,7 +44,7 @@ inline Gate         mkGate  (unsigned int id, GateType t){ Gate g; g.x = (id << 
 inline GateType     type    (Gate g) { return GateType(g.x & 1); }
 
 const Gate gate_Undef = { ((1U << 30)-1) << 2 };
-const Gate gate_True  = { 1 };
+const Gate gate_True  = { 0 };
 
 // Note! Use GMap instead of this:
 inline unsigned int index (Gate g) { return g.x >> 2; }
@@ -79,8 +79,8 @@ inline  Sig          toSig     (unsigned  i)         { Sig p; p.x = i; return p;
 
 const Sig sig_Undef = { ((1U << 30)-1) << 2 };  // }- Useful special constants.
 const Sig sig_Error = { (((1U << 30)-1) << 2) + 2};  // }
-const Sig sig_True  = { 1 };
-const Sig sig_False = { 3 };
+const Sig sig_True  = { 0 };
+const Sig sig_False = { 2 };
 
 // Note! Use SMap instead of this:
 inline unsigned int index (Sig s) { return s.x >> 1; }
