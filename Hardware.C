@@ -17,13 +17,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "SolverTypes.h"
-#include "Hardware.h"
-
-#include "SimpSolver.h"
-#include "Clausify.h"
+#include "simp/SimpSolver.h"
+#include "circ/Hardware.h"
+#include "circ/Clausify.h"
 
 #include <cstdio>
+
+using namespace Minisat;
 
 //=================================================================================================
 // Miscellaneous functions for generating hardware such as integer arithmetics, sorting etc.
@@ -32,7 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //-------------------------------------------------------------------------------------------------
 // A simple full-adder. Three bits input, two bits output:
 
-void fullAdder(Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry)
+void Minisat::fullAdder(Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry)
 {
     Sig w = c.mkXorEven(x, y);
     sum   = c.mkXorEven(w, z);
@@ -46,7 +46,7 @@ void fullAdder(Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry)
 static inline void pop2(vec<Sig>& xs, Sig& x, Sig& y){ x = xs.last(); xs.pop(); y = xs.last(); xs.pop(); }
 static inline void pop3(vec<Sig>& xs, Sig& x, Sig& y, Sig& z){ pop2(xs, x, y); z = xs.last(); xs.pop(); }
 
-void dadaAdder(Circ& c, vec<vec<Sig> >& columns, vec<Sig>& result)
+void Minisat::dadaAdder(Circ& c, vec<vec<Sig> >& columns, vec<Sig>& result)
 {
     Sig x,y,z, sum,carry;
 
@@ -76,7 +76,7 @@ void dadaAdder(Circ& c, vec<vec<Sig> >& columns, vec<Sig>& result)
 //-------------------------------------------------------------------------------------------------
 // Multiplier:
 
-void multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result)
+void Minisat::multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result)
 {
     vec<vec<Sig> > columns;
     for (int i = 0; i < xs.size(); i++)
@@ -92,7 +92,7 @@ void multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result)
 //-------------------------------------------------------------------------------------------------
 // Squarer:
 
-void squarer(Circ& c, vec<Sig>& xs, vec<vec<Sig> >& columns)
+static void squarer(Circ& c, vec<Sig>& xs, vec<vec<Sig> >& columns)
 {
     columns.clear();
     for (int i = 0; i < xs.size(); i++)
@@ -117,7 +117,7 @@ void squarer(Circ& c, vec<Sig>& xs, vec<Sig>& result)
 // Debug etc:
 
 
-void fullAdderCorrect(void)
+void Minisat::fullAdderCorrect(void)
 {
     Circ c;
 
@@ -177,7 +177,7 @@ static int readValue(vec<Sig>& xs, GMap<lbool>& values)
 
 
 
-void multiplierCorrect(int size)
+void Minisat::multiplierCorrect(int size)
 {
     Circ c;
 
@@ -269,7 +269,7 @@ static uint64_t nBits(uint64_t number)
 }
 
 
-void factorize64(uint64_t number)
+void Minisat::factorize64(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
@@ -315,7 +315,7 @@ void factorize64(uint64_t number)
 }
 
 
-void factorize64squarer(uint64_t number)
+void Minisat::factorize64squarer(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);

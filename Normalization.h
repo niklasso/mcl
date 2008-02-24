@@ -1,4 +1,4 @@
-/*************************************************************************************[DagShrink.h]
+/*********************************************************************************[Normalization.h]
 Copyright (c) 2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -17,23 +17,26 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_DagShrink_h
-#define Minisat_DagShrink_h
+#ifndef Minisat_Normalization_h
+#define Minisat_Normalization_h
 
-#include "circ/Circ.h"
-#include "circ/Aiger.h"
+#include "circ/CircTypes.h"
+
+#include <cstdio>
 
 namespace Minisat {
 
+//=================================================================================================
+// Normalization functions for different n-ary gate types:
 
-Sig  dagShrink       (Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
-void dagShrink       (AigerCirc& c, double& rnd_seed, bool only_copy = false);
-void dagShrink       (AigerCirc& c, int n_iters = 5);
+extern const vec<vec<Sig> > empty_context;
 
-void biereShrink     (AigerCirc& c);
+void normalizeAnds    (vec<Sig>& xs);
+void normalizeOrs     (vec<Sig>& xs);
+void normalizeXors    (vec<Sig>& xs);
+void normalizeTwoLevel(vec<vec<Sig> >& xss, const vec<vec<Sig> >& context = empty_context);
 
-void splitOutputs    (AigerCirc& c);
-void removeDeadLogic (AigerCirc& c);
+//=================================================================================================
 
 };
 

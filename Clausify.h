@@ -17,29 +17,35 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Clausify_h
-#define Clausify_h
+#ifndef Minisat_Clausify_h
+#define Minisat_Clausify_h
 
-#include "Circ.h"
-#include "SolverTypes.h"
+#include "core/SolverTypes.h"
+#include "circ/Circ.h"
+
+namespace Minisat {;
 
 // FIXME: handle constants !!!
 //=================================================================================================
 // Simple helpers:
 
 template<class S>
-void add1Clause(Lit x, S& solver, vec<Lit>& tmp) { 
+static void add1Clause(Lit x, S& solver, vec<Lit>& tmp) { 
     // printf(" [%s%d, %s%d]\n", sign(x)?"~":"", var(x), sign(y)?"~":"", var(y));
     tmp.clear(); tmp.push(x); solver.addClause(tmp); }
 
 template<class S>
-void add2Clause(Lit x, Lit y, S& solver, vec<Lit>& tmp) { 
+static void add2Clause(Lit x, Lit y, S& solver, vec<Lit>& tmp) { 
     // printf(" [%s%d, %s%d]\n", sign(x)?"~":"", var(x), sign(y)?"~":"", var(y));
     tmp.clear(); tmp.push(x); tmp.push(y); solver.addClause(tmp); }
 
 template<class S>
-void add3Clause(Lit x, Lit y, Lit z, S& solver, vec<Lit>& tmp) { 
+static void add3Clause(Lit x, Lit y, Lit z, S& solver, vec<Lit>& tmp) { 
     tmp.clear(); tmp.push(x); tmp.push(y); tmp.push(z); solver.addClause(tmp); }
+
+template<class S>
+static void add4Clause(Lit x, Lit y, Lit z, Lit w, S& solver, vec<Lit>& tmp) {
+    tmp.clear(); tmp.push(x); tmp.push(y); tmp.push(z); tmp.push(w); solver.addClause(tmp); }
 
 
 //=================================================================================================
@@ -60,6 +66,10 @@ class Clausifyer
 
     SSet       top_assumed;
 
+    int nof_ands;
+    int nof_xors;
+    int nof_muxs;
+
     // -------------------------------------------------------------------------------------------
     // Clausify:
     //
@@ -69,9 +79,15 @@ class Clausifyer
 
         while (stack.size() > 0){
             g = stack.last(); 
+            if (g == gate_True){
+                // Constant gate:
+                //
+                if (vmap[g] == var_Undef){
+                    vmap[g] = solver.newVar();
+                    add1Clause(mkLit(vmap[g]), solver, tmp_lits); }
+                stack.pop();
 
-            assert(g != gate_True);
-            if (type(g) == gtype_Inp){
+            }else if (type(g) == gtype_Inp){
                 // Input gate:
                 //
                 if (vmap[g] == var_Undef) 
@@ -85,28 +101,77 @@ class Clausifyer
                     // Mark gate while traversing "downwards":
                     //
                     vmap[g] = -2;
-                    circ.matchAnds(g, tmp_big_and, true);
-                    for (int i = 0; i < tmp_big_and.size(); i++)
-                        stack.push(gate(tmp_big_and[i]));
+
+#if 1
+                    Sig x, y, z;
+                    if (circ.matchMux(g, x, y, z)){
+                        stack.push(gate(x));
+                        stack.push(gate(y));
+
+                        if (y != ~z)
+                            nof_muxs++, stack.push(gate(z));
+                        else
+                            nof_xors++;
+                    }else
+#endif
+                    // 
+                    {
+                        nof_ands++;
+                        circ.matchAnds(g, tmp_big_and, false);
+                        for (int i = 0; i < tmp_big_and.size(); i++)
+                            stack.push(gate(tmp_big_and[i]));
+                    }
+
                 }else if (vmap[g] == -2){
                     // On way up, generate clauses:
                     //
                     vmap[g] = solver.newVar();
                     Lit lg = mkLit(vmap[g]);
-                    circ.matchAnds(g, tmp_big_and, true);
 
-                    // Implication(s) in one direction:
-                    for (int i = 0; i < tmp_big_and.size(); i++){
-                        Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
-                        add2Clause(~lg, p, solver, tmp_lits); }
+#if 1
+                    Sig x, y, z;
+                    if (circ.matchMux(g, x, y, z)){
+                        assert(vmap[gate(x)] != var_Undef);
+                        assert(vmap[gate(y)] != var_Undef);
+                        assert(vmap[gate(z)] != var_Undef);
 
-                    // Single implication in other direction:
-                    tmp_lits.clear();
-                    for (int i = 0; i < tmp_big_and.size(); i++){
-                        Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
-                        tmp_lits.push(~p); }
-                    tmp_lits.push(lg);
-                    solver.addClause(tmp_lits);
+                        assert(vmap[gate(x)] >= 0);
+                        assert(vmap[gate(y)] >= 0);
+                        assert(vmap[gate(z)] >= 0);
+
+                        Lit lx = mkLit(vmap[gate(x)], sign(x));
+                        Lit ly = mkLit(vmap[gate(y)], sign(y));
+                        Lit lz = mkLit(vmap[gate(z)], sign(z));
+
+
+                        // Implication(s) in one direction:
+                        add3Clause(~lg, ~lx,  ly, solver, tmp_lits);
+                        add3Clause(~lg,  lx,  lz, solver, tmp_lits);
+
+                        // Implication(s) in other direction:
+                        add3Clause( lg, ~lx, ~ly, solver, tmp_lits);
+                        add3Clause( lg,  lx, ~lz, solver, tmp_lits);
+                    }else
+#endif
+                    {
+                        circ.matchAnds(g, tmp_big_and, false);
+                    
+                        for (int i = 0; i < tmp_big_and.size(); i++)
+                            assert(tmp_big_and[i] != sig_True);
+                        
+                        // Implication(s) in one direction:
+                        for (int i = 0; i < tmp_big_and.size(); i++){
+                            Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
+                            add2Clause(~lg, p, solver, tmp_lits); }
+                        
+                        // Single implication in other direction:
+                        tmp_lits.clear();
+                        for (int i = 0; i < tmp_big_and.size(); i++){
+                            Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
+                            tmp_lits.push(~p); }
+                        tmp_lits.push(lg);
+                        solver.addClause(tmp_lits);
+                    }
 
                     assert(solver.okay());
                     stack.pop();
@@ -118,7 +183,13 @@ class Clausifyer
 
 
  public:
-    Clausifyer(Circ& c, S& s) : circ(c), solver(s) {}
+    Clausifyer(Circ& c, S& s) : 
+          circ(c)
+        , solver(s)
+        , nof_ands(0)
+        , nof_xors(0)
+        , nof_muxs(0)
+        {}
 
     Var  clausify      (Gate g){ clausifyIter(g); return vmap[g]; }
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
@@ -135,7 +206,7 @@ class Clausifyer
         if (sign(x) || type(x) == gtype_Inp)
             top.push(x);
         else
-            circ.matchAnds(gate(x), top, true);
+            circ.matchAnds(gate(x), top, false);
 
         // if (top.size() > 1)
         //     printf(" >>> Gathered %d top level gates\n", top.size());
@@ -148,13 +219,14 @@ class Clausifyer
                     add1Clause(clausify(top[i]), solver, tmp_lits);
                 else{
 
-                    circ.matchAnds(gate(top[i]), disj, true);
+                    circ.matchAnds(gate(top[i]), disj, false);
                     lits.clear();
                     for (int j = 0; j < disj.size(); j++)
                         lits.push(clausify(~disj[j]));
                     solver.addClause(lits);
                 }
             }
+        // fprintf(stderr, " >> (assume) ANDS = %d, XORS = %d, MUXES = %d\n", nof_ands, nof_xors, nof_muxs);
     }
 };
 
@@ -199,4 +271,7 @@ class NaiveClausifyer
 
 
 //=================================================================================================
+
+};
+
 #endif

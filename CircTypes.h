@@ -17,10 +17,12 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef CircTypes_h
-#define CircTypes_h
+#ifndef Minisat_CircTypes_h
+#define Minisat_CircTypes_h
 
-#include "Vec.h"
+#include "mtl/Vec.h"
+
+namespace Minisat {
 
 //=================================================================================================
 // Helper types (analogues of Var/Lit types from MiniSat):
@@ -101,6 +103,7 @@ class GMap : private vec<T>
     // this guarantees that the element 'g' can be indexed after this operation.
     void     growTo (Gate g)             { ((vec<T>&)(*this)).growTo(index(g) + 1   ); }
     void     growTo (Gate g, const T& e) { ((vec<T>&)(*this)).growTo(index(g) + 1, e); }
+    void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
 
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
@@ -121,6 +124,7 @@ class SMap : private vec<T>
     // this guarantees that the element 'g' can be indexed after this operation.
     void     growTo (Sig x)             { ((vec<T>&)(*this)).growTo(index(x) + 1   ); }
     void     growTo (Sig x, const T& e) { ((vec<T>&)(*this)).growTo(index(x) + 1, e); }
+    void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
 
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
@@ -183,4 +187,7 @@ class SSet
 
 
 //=================================================================================================
+
+};
+
 #endif

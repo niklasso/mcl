@@ -17,21 +17,24 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Circ_h
-#define Circ_h
+#ifndef Minisat_Circ_h
+#define Minisat_Circ_h
 
-#include "CircTypes.h"
-#include "SolverTypes.h"
-#include "Queue.h"
-#include "Sort.h"
+#include "mtl/Queue.h"
+#include "core/SolverTypes.h"
+#include "circ/CircTypes.h"
+#include "circ/Matching.h"
+#include "circ/Normalization.h"
 
 #include <cstdio>
+
+namespace Minisat {
 
 //=================================================================================================
 // Circ -- a class for representing combinational circuits.
 
 
-const uint32_t pair_hash_prime = 1073741789;
+static const uint32_t pair_hash_prime = 1073741789;
 
 class Circ
 {
@@ -48,6 +51,7 @@ class Circ
     unsigned int        n_ands;
     Gate*               strash;
     unsigned int        strash_cap;
+    vec<uint32_t>       gate_lim;
 
     Gate                tmp_gate;
 
@@ -63,20 +67,31 @@ class Circ
     bool         gateEq      (Gate x, Gate y)  const;
     void         strashInsert(Gate g);
     Gate         strashFind  (Gate g)          const;
+    void         strashRemove(Gate g);
     void         restrashAll ();
 
     Gate         gateFromId  (unsigned int id) const { return mkGate(id, idType(id)); }
 
  public:
-    Circ();
+    // Mode of operation:
+    //
+    uint32_t rewrite_mode;
 
-    void clear ();
-    void moveTo(Circ& to);
+    Circ();
 
     int  size  () const { return gates.size()-1; }
     int  nGates() const { return n_ands; }
     int  nInps () const { return n_inps; }
     int  nFanouts(Gate g) const { return n_fanouts[g]; }
+
+    // Environment state manipulation:
+    //
+    void clear  ();
+    void moveTo (Circ& to);
+
+    void push   ();
+    void pop    ();
+    void commit ();
 
     // Gate iterator:
     Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
@@ -90,7 +105,7 @@ class Circ
 
     // Node constructor functions:
     Sig mkInp    ();
-    Sig mkAnd    (Sig x, Sig y);
+    Sig mkAnd    (Sig x, Sig y, bool try_only = false, bool expensive_simp = true);
     Sig mkOr     (Sig x, Sig y);
     Sig mkXorOdd (Sig x, Sig y);
     Sig mkXorEven(Sig x, Sig y);
@@ -111,6 +126,8 @@ class Circ
     bool matchXor (Gate g, Sig& x, Sig& y);
     bool matchXors(Gate g, vec<Sig>& xs);
     void matchAnds(Gate g, vec<Sig>& xs, bool match_muxes = false);
+    void matchTwoLevel
+                  (Gate g, vec<vec<Sig> >& xss, bool match_muxes = false);
 
     // Lookup wether different different patterns already exists somewhere:
     Sig tryAnd     (Sig x, Sig y);
@@ -140,16 +157,8 @@ Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
-void normalizeAnds(vec<Sig>& xs);
-void normalizeXors(vec<Sig>& xs);
-
-bool matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
-bool matchMux (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z);
-bool matchXor (const Circ& c, Gate g, Sig& x, Sig& y);
-bool matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs);
-void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes = false);
-
 void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
+
 
 //=================================================================================================
 // Implementation of inline methods:
@@ -169,11 +178,13 @@ inline GateType Circ::idType(unsigned int id) const {
     return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 
 
-inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return ::matchMuxParts(*this, g, h, x, y, z); }
-inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return ::matchMux(*this, g, x, y, z); }
-inline bool Circ::matchXor (Gate g, Sig& x, Sig& y) { return ::matchXor(*this, g, x, y); }
-inline bool Circ::matchXors(Gate g, vec<Sig>& xs) { return ::matchXors(*this, g, tmp_stack, xs); }
-inline void Circ::matchAnds(Gate g, vec<Sig>& xs, bool match_muxes) { ::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs, match_muxes); }
+inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return Minisat::matchMuxParts(*this, g, h, x, y, z); }
+inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return Minisat::matchMux(*this, g, x, y, z); }
+inline bool Circ::matchXor (Gate g, Sig& x, Sig& y) { return Minisat::matchXor(*this, g, x, y); }
+inline bool Circ::matchXors(Gate g, vec<Sig>& xs) { return Minisat::matchXors(*this, g, tmp_stack, xs); }
+inline void Circ::matchAnds(Gate g, vec<Sig>& xs, bool match_muxes) { Minisat::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs, match_muxes); }
+inline void Circ::matchTwoLevel(Gate g, vec<vec<Sig> >& xss, bool match_muxes) { 
+    Minisat::matchTwoLevel(*this, g, tmp_set, tmp_stack, tmp_fanouts, xss, match_muxes); }
 
 //=================================================================================================
 // Implementation of strash-functions:
@@ -187,6 +198,8 @@ inline uint32_t Circ::gateHash(Gate g) const
 
 inline bool Circ::gateEq(Gate x, Gate y) const
 {
+    assert(x != gate_Undef);
+    assert(y != gate_Undef);
     assert(type(x) == gtype_And);
     assert(type(y) == gtype_And);
     //printf("checking %d : %c%d, %c%d\n", index(x), sign(gs[x].x)?' ':'-', index(gate(gs[x].x)), sign(gs[x].y)?' ':'-', index(gate(gs[x].y)));
@@ -200,11 +213,24 @@ inline Gate Circ::strashFind  (Gate g) const
     assert(type(g) == gtype_And);
     Gate h;
     //printf("searching for gate:\n");
-    for (h = strash[gateHash(g) % strash_cap]; h != gate_Undef && !gateEq(h, g); h = gates[h].strash_next){
+    for (h = strash[gateHash(g) % strash_cap]; h != gate_Undef && !gateEq(h, g); h = gates[h].strash_next)
         //printf(" --- inspecting gate: %d\n", index(h));
-        assert(type(h) == gtype_And);
-    }
+        ;
     return h;
+}
+
+
+inline void Circ::strashRemove(Gate g)
+{
+    Gate* h;
+    // printf("searching for gate %d to delete:\n", index(g));
+    for (h = &strash[gateHash(g) % strash_cap]; !gateEq(*h, g); h = &gates[*h].strash_next)
+        // printf(" --- inspecting gate: %d\n", index(*h));
+        ;
+    assert(*h != gate_Undef);
+    assert(gateEq(*h, g));
+
+    *h = gates[*h].strash_next;
 }
 
 
@@ -235,26 +261,114 @@ inline Sig  Circ::mkMuxOdd (Sig x, Sig y, Sig z) { return mkOr (mkAnd( x, y), mk
 inline Sig  Circ::mkMuxEven(Sig x, Sig y, Sig z) { return mkAnd(mkOr (~x, y), mkOr ( x, z)); }
 inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
 
-inline Sig  Circ::mkAnd (Sig x, Sig y){
+inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only, bool expensive_simp){
     // Simplify:
-    if      (x == sig_True)  return y;
-    else if (y == sig_True)  return x;
-    else if (x == y)         return x;
-    else if (x == sig_False || y == sig_False || x == ~y) 
-        return sig_False;
+    if (rewrite_mode >= 1){
+        if      (x == sig_True)  return y;
+        else if (y == sig_True)  return x;
+        else if (x == y)         return x;
+        else if (x == sig_False || y == sig_False || x == ~y) 
+            return sig_False;
+    }
 
-    // Order:
-    if (y < x) { Sig tmp = x; x = y; y = tmp; }
 
-    // Strash-lookup:
-    Gate g = mkGate(index(tmp_gate), gtype_And);
-    gates[g].x = x;
-    gates[g].y = y;
+    if (rewrite_mode >= 2)
+        // Repeat while productive:
+        //
+        for (;;){
+            Sig l  = x;
+            Sig r  = y;
+            Sig ll = type(l) == gtype_Inp ? sig_Undef : lchild(l);
+            Sig lr = type(l) == gtype_Inp ? sig_Undef : rchild(l);
+            Sig rl = type(r) == gtype_Inp ? sig_Undef : lchild(r);
+            Sig rr = type(r) == gtype_Inp ? sig_Undef : rchild(r);
+            
+        // Level two rules:
+        //
+            if (false)
+                ;
+#if 1
+            else if (!sign(l) && type(l) == gtype_And &&             (ll == ~r || lr == ~r)) 
+                return sig_False; // Contradiction 1.1
+            else if (!sign(r) && type(r) == gtype_And &&             (rl == ~l || rr == ~l)) 
+                return sig_False; // Contradiction 1.2
+            else if (!sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr))
+                return sig_False; // Contradiction 2
+#endif
 
-    // fprintf(stderr, "looking up node: %c%d & %c%d\n", sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
+#if 1
+            else if ( sign(l) && type(l) == gtype_And && (ll == ~r || lr == ~r))             
+                return r;         // Subsumption 1.1
+            else if ( sign(r) && type(r) == gtype_And && (rl == ~l || rr == ~l)) 
+                return l;         // Subsumption 1.2
+            
+            else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr)) 
+                return r;         // Subsumption 2.1
+            else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr)) 
+                return l;         // Subsumption 2.2
+#endif
 
-    g = strashFind(g);
-    if (g == gate_Undef){
+#if 1
+            else if (!sign(l) && type(l) == gtype_And && (ll ==  r || lr ==  r))
+                return l;         // Idempotency 1.1
+            else if (!sign(r) && type(r) == gtype_And && (rl ==  l || rr ==  l))             
+                return r;         // Idempotency 1.2
+#endif
+
+#if 1
+            else if ( sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && ( (ll == rl && lr == ~rr) || (ll == rr && lr == ~rl) )) 
+                return ~ll;       // Resolution 1.1
+            else if ( sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && ( (lr == rl && ll == ~rr) || (lr == rr && ll == ~rl) )) 
+                return ~lr;       // Resolution 1.1
+#endif
+            
+#if 1
+            else if ( sign(l) && type(l) == gtype_And && (ll == r)) 
+                { x = ~lr; y = r; }                        // Substitution 1.1
+            else if ( sign(l) && type(l) == gtype_And && (lr == r)) 
+                { x = ~ll; y = r; }                        // Substitution 1.2
+            else if ( sign(r) && type(r) == gtype_And && (rl == l)) 
+                { x = ~rr; y = l; }                        // Substitution 1.3
+            else if ( sign(r) && type(r) == gtype_And && (rr == l))
+                { x = ~rl; y = l; }                        // Substitution 1.4
+
+            else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == rl || ll == rr)) 
+                { x = ~lr; y = r; } // Substitution 2.1
+            else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (lr == rl || lr == rr)) 
+                { x = ~ll; y = r; } // Substitution 2.2
+            else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (rl == ll || rl == lr)) 
+                { x = ~rr; y = l; } // Substitution 2.3
+            else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (rr == ll || rr == lr)) 
+                { x = ~rl; y = l; } // Substitution 2.4
+#endif
+            else
+                break;
+        
+    }
+
+    Gate g = gate_Undef;
+    if (rewrite_mode >= 1){
+        assert(x != y);
+        assert(x != ~y);
+        assert(x != sig_True);
+        assert(x != sig_False);
+        assert(y != sig_True);
+        assert(y != sig_False);
+
+        // Order:
+        if (y < x) { Sig tmp = x; x = y; y = tmp; }
+
+        // Strash-lookup:
+        g = mkGate(index(tmp_gate), gtype_And);
+        gates[g].x = x;
+        gates[g].y = y;
+
+        // fprintf(stderr, "looking up node: %c%d & %c%d\n", sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
+        
+        g = strashFind(g);
+    }
+
+    if (!try_only && g == gate_Undef){
         // New node needs to be created:
         g = mkGate(allocId(), gtype_And);
         gates[g].x = x;
@@ -302,7 +416,7 @@ inline int Circ::costAnd (Sig x, Sig y)
     return tryAnd(x, y) == sig_Undef ? 1 : 0;
 }
 
-
+#if 0
 inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
 {
     // return mkOr (mkAnd( x, y), mkAnd(~x, z));
@@ -315,8 +429,19 @@ inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
 
     return (int)(a == sig_Undef) + (int)(b == sig_Undef) + (int)(c == sig_Undef);
 }
+#else
+inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
+{
+    uint32_t gates_before = nGates();
+    push();
+    mkMuxOdd(x, y, z);
+    uint32_t gates_after  = nGates();
+    pop();
+    return gates_after - gates_before;
+}
+#endif
 
-
+#if 0
 inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
 {
     // return mkAnd(mkOr (~x, y), mkOr ( x, z));
@@ -330,7 +455,17 @@ inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
 
     return (int)(a == sig_Undef) + (int)(b == sig_Undef) + (int)(c == sig_Undef);
 }
-
+#else
+inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
+{
+    uint32_t gates_before = nGates();
+    push();
+    mkMuxEven(x, y, z);
+    uint32_t gates_after  = nGates();
+    pop();
+    return gates_after - gates_before;
+}
+#endif
 
 inline int Circ::costXorOdd (Sig x, Sig y){ return costMuxOdd (x, ~y, y); }
 inline int Circ::costXorEven(Sig x, Sig y){ return costMuxEven(x, ~y, y); }
@@ -341,4 +476,7 @@ inline int Circ::costXorEven(Sig x, Sig y){ return costMuxEven(x, ~y, y); }
 
 
 //=================================================================================================
+
+};
+
 #endif

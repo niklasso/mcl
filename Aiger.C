@@ -17,8 +17,10 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "ParseUtils.h"
-#include "Aiger.h"
+#include "utils/ParseUtils.h"
+#include "circ/Aiger.h"
+
+using namespace Minisat;
 
 static unsigned int readPacked(StreamBuffer& in){
     unsigned int x = 0, i = 0;
@@ -43,7 +45,7 @@ static Sig aigToSig(vec<Sig>& id2sig, int aiger_lit) {
 }
 
 
-void readAiger (const char* filename, AigerCirc& c)
+void Minisat::readAiger(const char* filename, AigerCirc& c)
 {
     gzFile f = gzopen(filename, "rb");
 
@@ -134,8 +136,7 @@ void readAiger (const char* filename, AigerCirc& c)
     gzclose(f);
 }
 
-
-void writePacked(FILE* file, unsigned int x)
+static void writePacked(FILE* file, unsigned int x)
 {
     unsigned char ch;
     
@@ -157,26 +158,27 @@ static unsigned int sigToAig(GMap<unsigned int>& gate2id, Sig x) {
 }
 
 
-void writeAiger(const char* filename, const AigerCirc& c)
+void Minisat::writeAiger(const char* filename, const AigerCirc& c)
 {
     // fprintf(stderr, "aig %u %u %u %d %d\n", c.size(), inputs.size(), latch_defs.size(), outputs.size(), c.nGates());
 
     // Generate the set of reachable gates:
-    GSet reachable; 
-    bottomUpOrder(c.circ, c.outputs, reachable); 
-    bottomUpOrder(c.circ, c.latches, c.latch_defs, reachable);
+    // GSet reachable; 
+    // bottomUpOrder(c.circ, c.outputs, reachable); 
+    // bottomUpOrder(c.circ, c.latches, c.latch_defs, reachable);
 
     unsigned int n_inputs = 0, n_latches = 0;
 
     // Generate the same set, but in an order compatible with the AIGER format:
     GSet uporder;
     for (int i = 0; i < c.inputs.size(); i++)
-        if (reachable.has(c.inputs[i]))
+        //if (reachable.has(c.inputs[i]))
             n_inputs++, uporder.insert(c.inputs[i]);
 
     vec<Gate> ls;
     for (int i = 0; i < c.latches.size(); i++)
-        if (reachable.has(c.latches[i])){
+        // if (reachable.has(c.latches[i]))
+        {
             n_latches++; 
             ls.push(c.latches[i]);
             uporder.insert(c.latches[i]);
@@ -196,7 +198,7 @@ void writeAiger(const char* filename, const AigerCirc& c)
     if (f == NULL)
         fprintf(stderr, "ERROR! Could not open file <%s> for writing\n", filename), exit(1);
 
-    // fprintf(stderr, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, outputs.size(), n_gates);
+    // fprintf(stderr, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, c.outputs.size(), n_gates);
     fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, c.outputs.size(), n_gates);
 
     // Write latch-defs:

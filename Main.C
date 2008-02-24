@@ -17,23 +17,25 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include "utils/Options.h"
+#include "utils/System.h"
+#include "simp/SimpSolver.h"
+#include "circ/Circ.h"
+#include "circ/Clausify.h"
+#include "circ/Aiger.h"
+#include "circ/DagShrink.h"
+
 #include <cstdio>
 #include <cstring>
-
 #include <errno.h>
 #include <signal.h>
 
-#include "Options.h"
-#include "System.h"
-#include "SimpSolver.h"
-#include "Circ.h"
-#include "Clausify.h"
-#include "Aiger.h"
-#include "DagShrink.h"
+using namespace Minisat;
 
 //=================================================================================================
 
 
+static
 void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
@@ -76,7 +78,9 @@ int main(int argc, char** argv)
     BoolOption   clausify_naive ("MAIN", "clausify-naive", "Use naive clausification", false);
     StringOption aiger          ("MAIN", "aiger",  "If given, stop after preprocessing AIG and write the result to this file.");
     StringOption dimacs         ("MAIN", "dimacs", "If given, stop after producing CNF and write the result to this file.");
-
+    IntOption    dash_iters     ("MAIN", "dash-iters", "Number of DAG Aware Rewriting iterations.", 5);
+    BoolOption   split_output   ("MAIN", "split-output", "Split the topmost output conjunctions into multiple outputs.", true);
+    
     parseOptions(argc, argv, true);
 
     SimpSolver S;
@@ -104,7 +108,8 @@ int main(int argc, char** argv)
 
         //if (c.outputs.size() != 1)
         //    fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", c.outputs.size()), exit(1);
-        splitOutputs(c);
+        if (split_output)
+            splitOutputs(c);
 
         reportf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
         reportf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
@@ -113,9 +118,16 @@ int main(int argc, char** argv)
         double parsed_time = cpuTime();
         reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
-        double rnd_seed = 123456;
-        for (int i = 0; i < 5; i++)
-            dagShrink(c, rnd_seed);
+        dagShrink(c, dash_iters);
+
+        // void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
+        // {
+        //     GSet r; int n_ands = 0, n_xors = 0, n_muxs = 0, tot_ands = 0;
+        // 
+        //     for (int i = 0; i < c.outputs.size(); i++)
+        //         circInfo(c.circ, gate(c.outputs[i]), r, n_ands, n_xors, n_muxs, tot_ands);
+        //     fprintf(stderr, " >> ANDS = %d, XORS = %d, MUXES = %d, TOT = %d\n", n_ands, n_xors, n_muxs, tot_ands);
+        // }
 
         if (aiger != NULL){
             reportf("==============================[ Writing AIGER ]================================\n");

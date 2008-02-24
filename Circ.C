@@ -17,18 +17,29 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "Circ.h"
+#include "utils/Options.h"
+#include "circ/Circ.h"
+
+using namespace Minisat;
+
+//=================================================================================================
+// Circ options:
+
+static const char* _cat = "CIRC";
+
+static IntOption opt_rewrite_mode (_cat, "rw-mode", "Rewrite level. 0=None, 1=Strash+1-Level RWs, 2=Strash+2-Level RWs.", 2, IntRange(0, 2));
 
 //=================================================================================================
 // Circ members:
 
 
 Circ::Circ() 
-    : n_inps     (0) 
-    , n_ands     (0)
-    , strash     (NULL)
-    , strash_cap (0) 
-    , tmp_gate   (gate_True)
+    : n_inps       (0) 
+    , n_ands       (0)
+    , strash       (NULL)
+    , strash_cap   (0) 
+    , tmp_gate     (gate_True)
+    , rewrite_mode (opt_rewrite_mode)
 { 
     gates.growTo(tmp_gate); 
     restrashAll();
@@ -73,6 +84,29 @@ void Circ::moveTo(Circ& to)
 }
 
 
+void Circ::push()  { gate_lim.push(gates.size()); }
+void Circ::commit(){ gate_lim.pop(); }
+void Circ::pop()
+{
+    assert(gate_lim.size() > 0);
+    while ((uint32_t)gates.size() > gate_lim.last()){
+        Gate g = gateFromId(gates.size()-1);
+        if (type(g) == gtype_And){
+            strashRemove(mkGate(gates.size()-1, gtype_And));
+
+            // Update fanout counters:
+            if (n_fanouts[gate(lchild(g))] < 255) n_fanouts[gate(lchild(g))]--; // else fprintf(stderr, "WARNING! fanout counter size exceded.\n");
+            if (n_fanouts[gate(rchild(g))] < 255) n_fanouts[gate(rchild(g))]--; // else fprintf(stderr, "WARNING! fanout counter size exceded.\n");
+            
+            n_ands--;
+        }else
+            n_inps--;
+        gates.shrink(1);
+    }
+    gate_lim.pop();
+}
+
+
 void Circ::restrashAll()
 {
     static const unsigned int nprimes   = 47;
@@ -105,7 +139,7 @@ void Circ::restrashAll()
 // Given certain values for inputs, calculate the values of all gates in the cone of influence
 // of a signal:
 //
-bool evaluate(const Circ& c, Sig x, GMap<lbool>& values)
+bool Minisat::evaluate(const Circ& c, Sig x, GMap<lbool>& values)
 {
     Gate g = gate(x);
     values.growTo(g, l_Undef);
@@ -125,8 +159,8 @@ bool evaluate(const Circ& c, Sig x, GMap<lbool>& values)
 //=================================================================================================
 // Generate bottomUp topological orders:
 //
-void bottomUpOrder(const Circ& c, Sig  x, GSet& gset) { bottomUpOrder(c, gate(x), gset); }
-void bottomUpOrder(const Circ& c, Gate g, GSet& gset)
+void Minisat::bottomUpOrder(const Circ& c, Sig  x, GSet& gset) { bottomUpOrder(c, gate(x), gset); }
+void Minisat::bottomUpOrder(const Circ& c, Gate g, GSet& gset)
 {
     if (gset.has(g) || g == gate_True) return;
 
@@ -138,21 +172,21 @@ void bottomUpOrder(const Circ& c, Gate g, GSet& gset)
 }
 
 
-void bottomUpOrder(const Circ& c, const vec<Gate>& gs, GSet& gset)
+void Minisat::bottomUpOrder(const Circ& c, const vec<Gate>& gs, GSet& gset)
 {
     for (int i = 0; i < gs.size(); i++)
         bottomUpOrder(c, gs[i], gset);
 }
 
 
-void bottomUpOrder(const Circ& c, const vec<Sig>& xs, GSet& gset)
+void Minisat::bottomUpOrder(const Circ& c, const vec<Sig>& xs, GSet& gset)
 {
     for (int i = 0; i < xs.size(); i++)
         bottomUpOrder(c, xs[i], gset);
 }
 
 
-void bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& latch_defs, GSet& gset)
+void Minisat::bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& latch_defs, GSet& gset)
 {
     bool repeat;
     do {
@@ -170,252 +204,10 @@ void bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& lat
 }
 
 //=================================================================================================
-// Big-and/Big-xor normalization functions:
+// Calculate circuit statistics:
 //
 
-
-void normalizeXors(vec<Sig>& xs)
-{
-    // Calculate the parity and make inputs unsigned:
-    //
-    bool pol = false;
-    for (int i = 0; i < xs.size(); i++){
-        pol   = pol ^ sign(xs[i]);
-        xs[i] = mkSig(gate(xs[i]));
-    }
-
-    // Sort and remove duplicates properly:
-    //
-    int  i, j, k;
-    sort(xs);
-    for (i = j = 0; i < xs.size(); i = k){
-        // Check how many times xs[i] is repeated:
-        for (k = i; k < xs.size() && xs[k] == xs[i]; k++)
-            ;
-
-        // fprintf(stderr, "i = %d, j = %d, k = %d, k - i = %d\n", i, j, k, k - i);
-
-        // Only if xs[i] occurs an odd number of times it should be kept:
-        if ((k - i) % 2 == 1)
-            xs[j++] = xs[i];
-    }
-    xs.shrink(i - j);
-
-    // Remove possible remaining constant (can only be one, and it must occur first):
-    if (xs.size() > 0 && xs[0] == sig_True){
-        for (i = 1; i < xs.size(); i++)
-            xs[i-1] = xs[i];
-        xs.shrink(1);
-        pol = !pol;
-    }
-
-    if (xs.size() > 0)
-        // Attach the sign to the last element:
-        xs.last() = xs.last() ^ pol;
-    else if (pol)
-        // If the xor-chain is empty but the output is expected to be negated, add a constant true:
-        xs.push(sig_True);
-}
-
-
-void normalizeAnds(vec<Sig>& xs)
-{
-    int  i, j;
-    sort(xs);
-
-    // Remove duplicates and detect inconsistencies:
-    for (i = j = 1; i < xs.size(); i++)
-        if (xs[i] == ~xs[j-1]){
-            xs.clear();
-            xs.push(sig_False);
-            return;
-        }else if (xs[i] != xs[j-1])
-            xs[j++] = xs[i];
-
-    xs.shrink(i - j);
-
-    // Remove constant true:
-    if (xs.size() > 0 && xs[0] == sig_True){
-        for (i = 1; i < xs.size(); i++)
-            xs[i-1] = xs[i];
-        xs.shrink(1);
-    }
-
-    // Detect constant false:
-    if (xs.size() > 0 && xs[0] == sig_False){
-        xs.clear();
-        xs.push(sig_False);
-    }
-}
-
-
-//=================================================================================================
-// Circuit pattern matching functions:
-//
-
-bool matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z)
-{
-    Sig ll = c.lchild(g);
-    Sig lr = c.rchild(g);
-    Sig rl = c.lchild(h);
-    Sig rr = c.rchild(h);
-
-    assert(ll < lr);
-    assert(rl < rr);
-
-    // Find condition signal:
-    bool is_mux = true;
-    if      (ll == ~rl){ x = ll; y = ~lr; z = ~rr; } 
-    else if (lr == ~rl){ x = lr; y = ~ll; z = ~rr; } 
-    else if (ll == ~rr){ x = ll; y = ~lr; z = ~rl; }
-    else if (lr == ~rr){ x = lr; y = ~ll; z = ~rl; } 
-    else is_mux = false;
-
-    // Normalize:
-    if (is_mux && sign(x)){ Sig tmp = y; y = z; z = tmp; x = ~x; }
-
-    /*
-    if (is_mux && gate(x) == mkGate(602, gtype_Inp) && type(y) == gtype_Inp && type(z) == gtype_Inp){
-        fprintf(stderr, " >>> NODE (%d, %d) MATCHED MUX: %s%d, %s%s%d, %s%s%d\n", 
-                index(g), index(h),
-                type(x) == gtype_Inp ? "$" : "@", index(gate(x)), 
-                sign(y)?"-":"", type(y) == gtype_Inp ? "$" : "@", index(gate(y)), 
-                sign(z)?"-":"", type(z) == gtype_Inp ? "$" : "@", index(gate(z))
-                );
-    }
-    */
-
-    return is_mux;
-    
-}
-
-bool matchMux(const Circ& c, Gate g, Sig& x, Sig& y, Sig& z)
-{
-    if (type(g) != gtype_And) return false;
-
-    Sig left  = c.lchild(g);
-    Sig right = c.rchild(g);
-
-    if (!sign(left) || !sign(right) || type(left) != gtype_And || type(right) != gtype_And || c.nFanouts(gate(left)) != 1 || c.nFanouts(gate(right)) != 1) return false;
-
-    return matchMuxParts(c, gate(left), gate(right), x, y, z);
-}
-
-
-bool matchXor(const Circ& c, Gate g, Sig& x, Sig& y)
-{
-    Sig z;
-
-    if (!matchMux(c, g, x, y, z) || y != ~z) return false;
-
-    y = ~y;
-
-    return true;
-}
-
-
-// NOTE: Not sure what to do about sharing within an xor expression. Just match trees for now.
-bool matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs)
-{
-
-    Sig x, y;
-    if (!matchXor(c, g, x, y)) return false;
-
-    assert(!sign(x));
-    bool pol = sign(y);
-    y = mkSig(gate(y));
-
-    tmp_stack.clear();
-    tmp_stack.push(x);
-    tmp_stack.push(y);
-
-    while (tmp_stack.size() > 0){
-        Sig sig = tmp_stack.last(); tmp_stack.pop();
-        assert(!sign(sig));
-
-        //if (matchXor(c, gate(sig), x, y))
-        //fprintf(stderr, "nFanouts = %d\n", c.nFanouts(gate(sig)));
-
-        if (c.nFanouts(gate(sig)) != 2 || !matchXor(c, gate(sig), x, y))
-            xs.push(sig);
-        else {
-            pol = pol ^ sign(y);
-            y   = mkSig(gate(y));
-            tmp_stack.push(x);
-            tmp_stack.push(y);
-        }
-    }
-    assert(xs.size() > 0);
-    xs.last() = xs.last() ^ pol;
-    normalizeXors(xs);
-
-    // fprintf(stderr, "Matched an Xor chain: ");
-    // for (int i = 0; i < xs.size(); i++)
-    //     fprintf(stderr, "%s%d ", sign(xs[i])?"-":"", index(gate(xs[i])));
-    // fprintf(stderr, "\n");
-
-    return true;
-}
-
-
-void matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
-{
-    c.adjustMapSize(tmp_fanouts, 0);
-    tmp_set.clear();
-    tmp_set.insert(g);
-    tmp_stack.clear();
-    tmp_stack.push(c.lchild(g));
-    tmp_stack.push(c.rchild(g));
-
-    int queue_head = 0;
-
-    while (queue_head < tmp_stack.size()){
-        Sig x = tmp_stack[queue_head++];
-
-        Sig tmp_x, tmp_y, tmp_z;
-        if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
-            continue;
-
-        g = gate(x);
-        if (tmp_fanouts[g] < 255)
-            tmp_fanouts[g]++;
-
-        if (tmp_fanouts[g] < c.nFanouts(g))
-            continue;
-
-        tmp_set.insert(g);
-        tmp_stack.push(c.lchild(g));
-        tmp_stack.push(c.rchild(g));
-    }
-
-    // Clear tmp_fanouts:
-    for (int i = 0; i < tmp_stack.size(); i++)
-        tmp_fanouts[gate(tmp_stack[i])] = 0;
-
-    // Debug:
-    // for (Gate i = c.firstGate(); i != gate_Undef; i = c.nextGate(i))
-    //     assert(tmp_fanouts[g] == 0);
-
-    // Add nodes from the 'fringe' of the MFFC:
-    xs.clear();
-    for (int i = 0; i < tmp_set.size(); i++){
-        assert(type(tmp_set[i]) == gtype_And);
-
-        if (!tmp_set.has(gate(c.lchild(tmp_set[i])))) xs.push(c.lchild(tmp_set[i]));
-        if (!tmp_set.has(gate(c.rchild(tmp_set[i])))) xs.push(c.rchild(tmp_set[i]));
-    }
-
-    normalizeAnds(xs);
-
-    // fprintf(stderr, "Matched a Big-and: ");
-    // for (int i = 0; i < xs.size(); i++)
-    //     fprintf(stderr, "%s%d ", sign(xs[i])?"-":"", index(gate(xs[i])));
-    // fprintf(stderr, "\n");
-}
-
-
-
-void circInfo(Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands)
+void Minisat::circInfo(Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands)
 {
     if (reachable.has(g) || g == gate_True) return;
 
@@ -463,11 +255,11 @@ static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_
 }
 
 
-Sig  copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map) { 
+Sig  Minisat::copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map) { 
     src.adjustMapSize(copy_map, sig_Undef); return _copyGate(src, dst, g, copy_map); }
-Sig  copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_map) {
+Sig  Minisat::copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_map) {
     src.adjustMapSize(copy_map, sig_Undef); return _copySig (src, dst, x, copy_map); }
-void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map)
+void Minisat::copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map)
 {
     src.adjustMapSize(copy_map, sig_Undef); 
     for (int i = 0; i < xs.size(); i++)

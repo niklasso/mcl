@@ -17,10 +17,12 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Aiger_h
-#define Aiger_h
+#ifndef Minisat_Aiger_h
+#define Minisat_Aiger_h
 
-#include "Circ.h"
+#include "circ/Circ.h"
+
+namespace Minisat {
 
 //=================================================================================================
 // Functions for parsing and printing circuits in the AIGER format. See <http://fmv.jku.at/aiger/>
@@ -38,4 +40,7 @@ void readAiger (const char* filename, AigerCirc& c);
 void writeAiger(const char* filename, const AigerCirc& c);
 
 //=================================================================================================
+
+};
+
 #endif

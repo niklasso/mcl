@@ -1,4 +1,4 @@
-/**************************************************************************************[Hardware.h]
+/**************************************************************************************[Matching.h]
 Copyright (c) 2007, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -17,28 +17,31 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Hardware_h
-#define Minisat_Hardware_h
+#ifndef Minisat_Matching_h
+#define Minisat_Matching_h
 
-#include "circ/Circ.h"
+#include "circ/CircTypes.h"
+
+#include <cstdio>
 
 namespace Minisat {
 
 //=================================================================================================
-// Miscellaneous functions for generating hardware such as integer arithmetics, sorting etc.
+// Circuit pattern matching functions:
 
-void fullAdder (Circ& c, Sig x, Sig y, Sig z, Sig& sum, Sig& carry);
-void dadaAdder (Circ& c, vec<vec<Sig> >& columns, vec<Sig>& result);
-void multiplier(Circ& c, vec<Sig>& xs, vec<Sig>& ys, vec<Sig>& result);
-void squarer   (Circ& c, vec<Sig>& xs, vec<Sig>& result);
+class Circ;
 
-void fullAdderCorrect(void);
-void multiplierCorrect(int size);
-void factorize64(uint64_t number);
-void factorize64squarer(uint64_t number);
+bool matchMuxParts (const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
+bool matchMux      (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z);
+bool matchXor      (const Circ& c, Gate g, Sig& x, Sig& y);
+bool matchXors     (const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs);
+void matchAnds     (const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes = false);
+void matchTwoLevel (const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<vec<Sig> >& xss, bool match_muxes = false);
 
 //=================================================================================================
+// Debug etc:
 
 };
 
+//=================================================================================================
 #endif
