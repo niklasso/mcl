@@ -416,7 +416,7 @@ inline int Circ::costAnd (Sig x, Sig y)
     return tryAnd(x, y) == sig_Undef ? 1 : 0;
 }
 
-#if 0
+#if 1
 inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
 {
     // return mkOr (mkAnd( x, y), mkAnd(~x, z));
@@ -441,7 +441,7 @@ inline int Circ::costMuxOdd (Sig x, Sig y, Sig z)
 }
 #endif
 
-#if 0
+#if 1
 inline int Circ::costMuxEven(Sig x, Sig y, Sig z)
 {
     // return mkAnd(mkOr (~x, y), mkOr ( x, z));

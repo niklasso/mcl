@@ -552,7 +552,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
         dash_stats.current().nof_mux_nodes++;
 #endif
     
-#if 0
+#if 1
     }else if (type(g) == gtype_And){
         in.matchAnds(g, xs);
 
@@ -683,7 +683,7 @@ void Minisat::dagShrink(AigerCirc& c, int n_iters)
     fprintf(stderr, "==========================[ DAG Aware Minimization ]===========================\n");
     fprintf(stderr, "| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
     fprintf(stderr, "|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
-    fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
+    // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
     fprintf(stderr, "===============================================================================\n");
 
     for (int i = 0; i < n_iters; i++){
