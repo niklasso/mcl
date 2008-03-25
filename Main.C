@@ -40,20 +40,20 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsed();
-    reportf("restarts              : %"PRIu64"\n", solver.starts);
-    reportf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
-    reportf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
-    reportf("propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
-    reportf("conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
-    if (mem_used != 0) reportf("Memory used           : %.2f MB\n", mem_used);
-    reportf("CPU time              : %g s\n", cpu_time);
+    printf("restarts              : %"PRIu64"\n", solver.starts);
+    printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
+    printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
+    printf("propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
+    printf("conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
+    if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
+    printf("CPU time              : %g s\n", cpu_time);
 }
 
 SimpSolver* solver;
 static void SIGINT_handler(int signum) {
-    reportf("\n"); reportf("*** INTERRUPTED ***\n");
+    printf("\n"); printf("*** INTERRUPTED ***\n");
     printStats(*solver);
-    reportf("\n"); reportf("*** INTERRUPTED ***\n");
+    printf("\n"); printf("*** INTERRUPTED ***\n");
     exit(1); }
 
 
@@ -64,12 +64,12 @@ static void SIGINT_handler(int signum) {
 int main(int argc, char** argv)
 {
     setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input is in plain or gzipped binary AIGER.\n");
-    reportf("Using MiniSat 2.0 beta\n");
+    printf("Using MiniSat 2.0 beta\n");
 
 #if defined(__linux__)
     fpu_control_t oldcw, newcw;
     _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-    reportf("WARNING: for repeatability, setting FPU to use double precision\n");
+    printf("WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
     // Extra options:
@@ -97,8 +97,8 @@ int main(int argc, char** argv)
     if (argc < 2 || argc > 3)
         printUsageAndExit(argc, argv);
     else {
-        reportf("============================[ Problem Statistics ]=============================\n");
-        reportf("|                                                                             |\n");
+        printf("============================[ Problem Statistics ]=============================\n");
+        printf("|                                                                             |\n");
 
         AigerCirc c;
         readAiger(argv[1], c);
@@ -111,12 +111,12 @@ int main(int argc, char** argv)
         if (split_output)
             splitOutputs(c);
 
-        reportf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
-        reportf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
-        reportf("|  Number of gates:      %12d                                         |\n", c.circ.nGates());
+        printf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
+        printf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
+        printf("|  Number of gates:      %12d                                         |\n", c.circ.nGates());
 
         double parsed_time = cpuTime();
-        reportf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+        printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
         dagShrink(c, dash_iters);
 
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
         // }
 
         if (aiger != NULL){
-            reportf("==============================[ Writing AIGER ]================================\n");
+            printf("==============================[ Writing AIGER ]================================\n");
             writeAiger(aiger, c);
             exit(0);
         }
@@ -170,11 +170,11 @@ int main(int argc, char** argv)
                 input_vars.push(cl.clausify(c.inputs[i])); 
         }
 
-        reportf("|  Number of variables:  %12d                                         |\n", S.nVars());
-        reportf("|  Number of clauses:    %12d                                         |\n", S.nClauses());
+        printf("|  Number of variables:  %12d                                         |\n", S.nVars());
+        printf("|  Number of clauses:    %12d                                         |\n", S.nClauses());
 
         double clausify_time = cpuTime();
-        reportf("|  Clausify time:        %12.2f s                                       |\n", clausify_time - parsed_time);
+        printf("|  Clausify time:        %12.2f s                                       |\n", clausify_time - parsed_time);
     }
 
     // Freeze input vars:
@@ -184,31 +184,31 @@ int main(int argc, char** argv)
     if (pre){
         double simplified_time_before = cpuTime();
         S.eliminate(true);
-        reportf("|  Simplification time:  %12.2f s                                       |\n", cpuTime() - simplified_time_before);
+        printf("|  Simplification time:  %12.2f s                                       |\n", cpuTime() - simplified_time_before);
     }
-    reportf("|                                                                             |\n");
+    printf("|                                                                             |\n");
 
     FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
     if (!S.okay()){
         if (res != NULL) fprintf(res, "0\n"), fclose(res);
-        reportf("===============================================================================\n");
-        reportf("Solved by simplification\n");
+        printf("===============================================================================\n");
+        printf("Solved by simplification\n");
         printStats(S);
-        reportf("\n");
+        printf("\n");
         printf("UNSATISFIABLE\n");
         exit(20);
     }
 
     if (dimacs){
-        reportf("==============================[ Writing DIMACS ]===============================\n");
+        printf("==============================[ Writing DIMACS ]===============================\n");
         S.toDimacs(dimacs);
         printStats(S);
         exit(0);
     }else{
         bool ret = S.solve();
         printStats(S);
-        reportf("\n");
+        printf("\n");
         printf(ret ? "SATISFIABLE\n" : "UNSATISFIABLE\n");
         if (res != NULL){
             if (ret){

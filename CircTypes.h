@@ -128,6 +128,8 @@ class SMap : private vec<T>
 
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
+
+    void     moveTo (SMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
 };
 
 

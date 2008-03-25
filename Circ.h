@@ -140,6 +140,56 @@ class Circ
 
 
 //=================================================================================================
+// Box -- a class for storing inputs and outputs (roots/sinks) to a (sub) circuit:
+
+struct Box {
+    vec<Gate> inps;
+    vec<Sig>  outs;
+
+    void moveTo(Box& to){ inps.moveTo(to.inps); outs.moveTo(to.outs); }
+    void remap (const GMap<Sig>& map, Box& to){
+        for (int i = 0; i < inps.size(); i++) to.inps.push(gate(map[inps[i]]));
+        for (int i = 0; i < outs.size(); i++) to.outs.push(map[gate(outs[i])] ^ sign(outs[i]));
+    }
+};
+
+
+//=================================================================================================
+// Flops -- a class for representing the sequential behaviour of a circuit:
+
+class Flops {
+    vec<Gate>  gates;
+    GMap<Sig>  defs;
+    SMap<char> is_def; // is_def[s] is true iff there exists a gate g such that defs[g] == s
+
+ public:
+    void clear()         { gates.clear(); defs.clear(); is_def.clear(); }
+    void adjust(Circ& c) { c.adjustMapSize(defs, sig_Undef); c.adjustMapSize(is_def, (char)0); }
+
+    void defineFlop(Gate f, Sig def){
+        gates.push(f);
+        defs  [f]   = def;
+        is_def[def] = 1; }
+
+    bool isDef     (Sig x) const { return is_def[x]; }
+    Sig  def       (Gate f)const { return defs[f]; }
+    int  size      ()      const { return gates.size(); }
+    Gate operator[](int i) const { return gates[i]; }
+
+    void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
+    void remap (const GMap<Sig>& map, Flops& to){
+        for (int i = 0; i < gates.size(); i++){
+            Gate f   = gates[i];
+            Sig  def = defs[f];
+            to.defineFlop(gate(map[f]), map[gate(def)] ^ sign(def));
+
+            assert(!sign(map[f]));
+        }
+    }
+};
+
+
+//=================================================================================================
 // Circ utility functions:
 
 
