@@ -105,7 +105,7 @@ class Circ
 
     // Node constructor functions:
     Sig mkInp    ();
-    Sig mkAnd    (Sig x, Sig y, bool try_only = false, bool expensive_simp = true);
+    Sig mkAnd    (Sig x, Sig y, bool try_only = false);
     Sig mkOr     (Sig x, Sig y);
     Sig mkXorOdd (Sig x, Sig y);
     Sig mkXorEven(Sig x, Sig y);
@@ -146,8 +146,10 @@ struct Box {
     vec<Gate> inps;
     vec<Sig>  outs;
 
+    void clear () { inps.clear(); outs.clear(); }
     void moveTo(Box& to){ inps.moveTo(to.inps); outs.moveTo(to.outs); }
     void remap (const GMap<Sig>& map, Box& to){
+        to.clear();
         for (int i = 0; i < inps.size(); i++) to.inps.push(gate(map[inps[i]]));
         for (int i = 0; i < outs.size(); i++) to.outs.push(map[gate(outs[i])] ^ sign(outs[i]));
     }
@@ -163,8 +165,8 @@ class Flops {
     SMap<char> is_def; // is_def[s] is true iff there exists a gate g such that defs[g] == s
 
  public:
-    void clear()         { gates.clear(); defs.clear(); is_def.clear(); }
-    void adjust(Circ& c) { c.adjustMapSize(defs, sig_Undef); c.adjustMapSize(is_def, (char)0); }
+    void clear()               { gates.clear(); defs.clear(); is_def.clear(); }
+    void adjust(const Circ& c) { c.adjustMapSize(defs, sig_Undef); c.adjustMapSize(is_def, (char)0); }
 
     void defineFlop(Gate f, Sig def){
         gates.push(f);
@@ -172,12 +174,15 @@ class Flops {
         is_def[def] = 1; }
 
     bool isDef     (Sig x) const { return is_def[x]; }
+    bool isFlop    (Gate f)const { return defs[f] != sig_Undef; }
     Sig  def       (Gate f)const { return defs[f]; }
     int  size      ()      const { return gates.size(); }
     Gate operator[](int i) const { return gates[i]; }
 
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
-    void remap (const GMap<Sig>& map, Flops& to){
+    void remap (const Circ& c, const GMap<Sig>& map, Flops& to){
+        to.clear();
+        to.adjust(c);
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
             Sig  def = defs[f];
@@ -311,7 +316,7 @@ inline Sig  Circ::mkMuxOdd (Sig x, Sig y, Sig z) { return mkOr (mkAnd( x, y), mk
 inline Sig  Circ::mkMuxEven(Sig x, Sig y, Sig z) { return mkAnd(mkOr (~x, y), mkOr ( x, z)); }
 inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
 
-inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only, bool expensive_simp){
+inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only){
     // Simplify:
     if (rewrite_mode >= 1){
         if      (x == sig_True)  return y;
@@ -444,6 +449,7 @@ inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only, bool expensive_simp){
     return mkSig(g);
 }
 
+#if 0
 inline Sig Circ::tryAnd(Sig x, Sig y)
 {
     assert(gate(x) != gate_True);
@@ -459,7 +465,9 @@ inline Sig Circ::tryAnd(Sig x, Sig y)
 
     return mkSig(strashFind(g));
 }
-
+#else
+inline Sig Circ::tryAnd(Sig x, Sig y) { return mkAnd(x, y, true); }
+#endif
 
 inline int Circ::costAnd (Sig x, Sig y)
 {

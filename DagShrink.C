@@ -192,27 +192,25 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
     if (xs.size() < cut_off)
         for (int i = 1; i < xs.size(); i++){
             if (xs[i] == sig_Undef) continue;
-            
             assert(gate(xs[i]) != gate_True);
+
             for (int j = 0; j < i; j++){
 
+                if (xs[j] == sig_Undef) continue;
                 assert(xs[j] != sig_True);
                 assert(xs[j] != sig_False);
 
-                if (xs[j] != sig_Undef && in.costAnd(xs[i], xs[j]) == 0){
-                    xs.push(in.mkAnd(xs[i], xs[j]));
-                    assert(xs.last() != sig_True);
-                    assert(xs.last() != sig_False);
+                Sig x = in.tryAnd(xs[i], xs[j]);
+
+                if (x == sig_Undef) continue;
+
+                if (x == sig_False) {
+                    // Contradiction found:
+                    in.pop();
+                    return sig_False;
+                }else{
+                    if (x != sig_True) reused_nodes++, xs.push(x);
                     xs[i] = xs[j] = sig_Undef;
-                    reused_nodes++;
-                    
-                    for (int k = 0; k < xs.size(); k++)
-                        if (xs[k] != sig_Undef && xs[k] == ~xs.last()){
-                            // Contradiction found:
-                            in.pop();
-                            return sig_False;
-                        }
-                    
                     break;
                 }
             }
@@ -536,7 +534,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
     vec<Sig> xs; 
     if (in.matchXors(g, xs)){
         ::dagShrink(in, out, xs, map, rnd_seed);
-        // normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
+        normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
 
         dash_stats.current().nof_xor_nodes++; dash_stats.current().total_xor_size += xs.size();
         result = rebuildXors(out, xs, rnd_seed);
@@ -594,6 +592,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
 }
 
 
+#if 0
 static void findDefs(AigerCirc& c)
 {
     vec<Sig> xs;
@@ -615,68 +614,42 @@ static void findDefs(AigerCirc& c)
         }
         
 }
+#endif
 
 
-void Minisat::dagShrink(AigerCirc& c, double& rnd_seed, bool only_copy)
+void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy)
 {
-    Circ      tmp; 
+    Circ      tmp_circ;
+    Box       tmp_box;
+    Flops     tmp_flops;
     GMap<Sig> map;
 
-    // findDefs(c);
+    // Copy inputs (including flop gates):
+    c.adjustMapSize(map, sig_Undef);
+    for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = tmp_circ.mkInp();
 
-    // Copy inputs & latches:
-    c.circ.adjustMapSize(map, sig_Undef);
-    for (int i = 0; i < c.inputs.size(); i++)  map[c.inputs[i]]  = tmp.mkInp();
-    for (int i = 0; i < c.latches.size(); i++) map[c.latches[i]] = tmp.mkInp();
+    // Shrink circuit with roots in 'b.outs':
+    for (int i = 0; i < b.outs.size(); i++)
+        if (only_copy) copyGate (c, tmp_circ, gate(b.outs[i]), map);
+        else           dagShrink(c, tmp_circ, gate(b.outs[i]), map, rnd_seed);
 
-    // Shrink circuit with roots in 'outputs' and 'latch_defs':
-    for (int i = 0; i < c.outputs.size(); i++)
-        if (only_copy) copyGate (c.circ, tmp, gate(c.outputs[i]), map);
-        else           dagShrink(c.circ, tmp, gate(c.outputs[i]), map, rnd_seed);
-
-    for (int i = 0; i < c.latches.size(); i++)
-        if (only_copy) copyGate (c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map);
-        else           dagShrink(c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map, rnd_seed);
     if (!only_copy){
-        dash_stats.current().total_nodes_before = c.circ.nGates();
-        dash_stats.current().total_nodes_after  = tmp.nGates();
+        dash_stats.current().total_nodes_before = c.nGates();
+        dash_stats.current().total_nodes_after  = tmp_circ.nGates();
     }
+
+    // Remap inputs, outputs and flops:
+    b  .remap(map, tmp_box);
+    flp.remap(tmp_circ, map, tmp_flops);
 
     // Move circuit back:
-    tmp.moveTo(c.circ);
-
-    // Remap inputs:
-    for (int i = 0; i < c.inputs.size(); i++){
-        // Should I make the follwing assertion hold?
-        // assert(c.inputs[i] == gate(map[c.inputs[i]]));
-        c.inputs[i] = gate(map[c.inputs[i]]);
-    }
-
-    // Remap outputs:
-    for (int i = 0; i < c.outputs.size(); i++){
-        assert(map[gate(c.outputs[i])] != sig_Undef);
-        c.outputs[i] = map[gate(c.outputs[i])] ^ sign(c.outputs[i]);
-    }
-
-    // Remap latches & latch_defs:
-    c.latch_defs.clear();
-    c.circ.adjustMapSize(c.latch_defs, sig_Undef);
-    for (int i = 0; i < c.latches.size(); i++){
-        assert(map[c.latches[i]] != sig_Undef);
-        assert(!sign(map[c.latches[i]]));
-        assert(c.latch_defs[c.latches[i]] != sig_Undef);
-        assert(map[gate(c.latch_defs[c.latches[i]])] != sig_Undef);
-
-        Sig x = map[c.latches[i]];
-        Sig d = map[gate(c.latch_defs[c.latches[i]])] ^ sign(c.latch_defs[c.latches[i]]);
-
-        c.latches[i]          = gate(x);
-        c.latch_defs[gate(x)] = d;
-    }
+    tmp_circ .moveTo(c);
+    tmp_box  .moveTo(b);
+    tmp_flops.moveTo(flp);
 }
 
 
-void Minisat::dagShrink(AigerCirc& c, int n_iters)
+void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, int n_iters)
 {
     double rnd_seed = 123456789;
 
@@ -688,9 +661,30 @@ void Minisat::dagShrink(AigerCirc& c, int n_iters)
 
     for (int i = 0; i < n_iters; i++){
         dash_stats.clear();
-        dagShrink(c, rnd_seed);
+        dagShrink(c, b, flp, rnd_seed);
         dash_stats.print();
     }
+}
+
+
+void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, double frac)
+{
+    double rnd_seed = 123456789;
+
+    fprintf(stderr, "==========================[ DAG Aware Minimization ]===========================\n");
+    fprintf(stderr, "| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
+    fprintf(stderr, "|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
+    // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
+    fprintf(stderr, "===============================================================================\n");
+
+    int size_before, size_after;
+    do {
+        dash_stats.clear();
+        size_before = c.nGates();
+        dagShrink(c, b, flp, rnd_seed);
+        size_after = c.nGates();
+        dash_stats.print();
+    } while (frac < ((double)(size_before - size_after) / size_before));
 }
 
 
@@ -699,7 +693,7 @@ void Minisat::dagShrink(AigerCirc& c, int n_iters)
 //
 
 // Breaking down big output conjunctions, and merging equivalent output nodes:
-void Minisat::splitOutputs(AigerCirc& c)
+void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
 {
     SSet     all_outputs;
     vec<Sig> xs;
@@ -708,18 +702,18 @@ void Minisat::splitOutputs(AigerCirc& c)
         bool again = false;
         all_outputs.clear();
 
-        for (int i = 0; i < c.outputs.size(); i++){
-            Sig x = c.outputs[i];
+        for (int i = 0; i < b.outs.size(); i++){
+            Sig x = b.outs[i];
             
-            if (!sign(x) && type(x) == gtype_And){
-                c.circ.matchAnds(gate(x), xs, true);
+            if (!flp.isDef(x) && !sign(x) && type(x) == gtype_And){
+                c.matchAnds(gate(x), xs, true);
                 // fprintf(stderr, " >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                 
                 for (int j = 0; j < xs.size(); j++){
                     if (!sign(xs[j]) && type(xs[j]) == gtype_And)
                         again = true;
 
-                    // fprintf(stderr, " >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.circ.nFanouts(gate(xs[j])));
+                    // fprintf(stderr, " >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
                     
                     all_outputs.insert(xs[j]);
                 }
@@ -735,9 +729,9 @@ void Minisat::splitOutputs(AigerCirc& c)
                 all_outputs.insert(x);
         }
 
-        c.outputs.clear();
+        b.outs.clear();
         for (int i = 0; i < all_outputs.size(); i++)
-            c.outputs.push(all_outputs[i]);
+            b.outs.push(all_outputs[i]);
 
         break;
 
@@ -747,151 +741,13 @@ void Minisat::splitOutputs(AigerCirc& c)
         //     fprintf(stderr, "AGAIN\n");
     }
 
-    removeDeadLogic(c);
+    removeDeadLogic(c, b, flp);
 }
 
 
 // Remove logic not reachable from some output or latch:
-void Minisat::removeDeadLogic(AigerCirc& c)
+void Minisat::removeDeadLogic(Circ& c, Box& b, Flops& flp)
 {
     double dummy_seed = 123;
-    dagShrink(c, dummy_seed, true);
-}
-
-
-//=================================================================================================
-// Armin Biere and Robert Brummaier's simple two-level AIG simplification:
-//
-
-
-static int biere_num_contr = 0;
-static int biere_num_subsump = 0;
-static int biere_num_idem = 0;
-static int biere_num_res = 0;
-static int biere_num_subst = 0;
-
-static Sig biereShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map);
-
-static Sig biereShrink(Circ& in, Circ& out, Sig  x, GMap<Sig>& map){
-    return biereShrink(in, out, gate(x), map) ^ sign(x); }
-
-static Sig biereShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map)
-{
-    if (map[g] != sig_Undef) return map[g];
-    else if (g == gate_True) return map[g] = sig_True;
-    else if (type(g) == gtype_Inp)
-        return map[g] = out.mkInp();
-    else{
-        // 'g' is an and-gate:
-
-        Sig l  = biereShrink(in, out, in.lchild(g), map);
-        Sig r  = biereShrink(in, out, in.rchild(g), map);
-        
-        Sig ll = type(l) == gtype_Inp ? sig_Undef : out.lchild(l);
-        Sig lr = type(l) == gtype_Inp ? sig_Undef : out.rchild(l);
-
-        Sig rl = type(r) == gtype_Inp ? sig_Undef : out.lchild(r);
-        Sig rr = type(r) == gtype_Inp ? sig_Undef : out.rchild(r);
-
-        // Level two rules:
-        //
-        if      (!sign(l) && type(l) == gtype_And &&             (ll == ~r || lr == ~r))                             return biere_num_contr++, map[g] = sig_False; // Contradiction 1.1
-        else if (!sign(r) && type(r) == gtype_And &&             (rl == ~l || rr == ~l))                             return biere_num_contr++, map[g] = sig_False; // Contradiction 1.2
-        else if (!sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr)) return biere_num_contr++, map[g] = sig_False; // Contradiction 2
-
-#if 1
-        else if ( sign(l) && type(l) == gtype_And && (ll == ~r || lr == ~r))                             return biere_num_subsump++, map[g] = r;         // Subsumption 1.1
-        else if ( sign(r) && type(r) == gtype_And && (rl == ~l || rr == ~l))                             return biere_num_subsump++, map[g] = l;         // Subsumption 1.2
-
-        else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr)) return biere_num_subsump++, map[g] = r;         // Subsumption 2.1
-        else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (ll == ~rl || ll == ~rr || lr == ~rl || lr == ~rr)) return biere_num_subsump++, map[g] = l;         // Subsumption 2.2
-#endif
-
-#if 1
-        else if (!sign(l) && type(l) == gtype_And && (ll ==  r || lr ==  r))                             return biere_num_idem++, map[g] = l;         // Idempotency 1.1
-        else if (!sign(r) && type(r) == gtype_And && (rl ==  l || rr ==  l))                             return biere_num_idem++, map[g] = r;         // Idempotency 1.2
-#endif
-
-#if 1
-        else if ( sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && ( (ll == rl && lr == ~rr) || (ll == rr && lr == ~rl) )) return biere_num_res++, map[g] = ~ll;    // Resolution 1.1
-        else if ( sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && ( (lr == rl && ll == ~rr) || (lr == rr && ll == ~rl) )) return biere_num_res++, map[g] = ~lr;    // Resolution 1.1
-#endif
-
-#if 1
-        else if ( sign(l) && type(l) == gtype_And && (ll == r)) return biere_num_subst++, map[g] = out.mkAnd(~lr, r);               // Substitution 1.1
-        else if ( sign(l) && type(l) == gtype_And && (lr == r)) return biere_num_subst++, map[g] = out.mkAnd(~ll, r);               // Substitution 1.2
-        else if ( sign(r) && type(r) == gtype_And && (rl == l)) return biere_num_subst++, map[g] = out.mkAnd(~rr, l);               // Substitution 1.3
-        else if ( sign(r) && type(r) == gtype_And && (rr == l)) return biere_num_subst++, map[g] = out.mkAnd(~rl, l);               // Substitution 1.4
-
-
-        else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (ll == rl || ll == rr)) return biere_num_subst++, map[g] = out.mkAnd(~lr, r);  // Substitution 2.1
-        else if ( sign(l) && type(l) == gtype_And && !sign(r) && type(r) == gtype_And && (lr == rl || lr == rr)) return biere_num_subst++, map[g] = out.mkAnd(~ll, r);  // Substitution 2.2
-        else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (rl == ll || rl == lr)) return biere_num_subst++, map[g] = out.mkAnd(~rr, l);  // Substitution 2.3
-        else if (!sign(l) && type(l) == gtype_And &&  sign(r) && type(r) == gtype_And && (rr == ll || rr == lr)) return biere_num_subst++, map[g] = out.mkAnd(~rl, l);  // Substitution 2.4
-#endif
-        else
-            return map[g] = out.mkAnd(l, r);
-    }
-        
-}
-
-void Minisat::biereShrink(AigerCirc& c)
-{
-    Circ      tmp; 
-    GMap<Sig> map;
-
-    // findDefs(c);
-
-    // Copy inputs & latches:
-    c.circ.adjustMapSize(map, sig_Undef);
-    for (int i = 0; i < c.inputs.size(); i++)  map[c.inputs[i]]  = tmp.mkInp();
-    for (int i = 0; i < c.latches.size(); i++) map[c.latches[i]] = tmp.mkInp();
-
-    // Shrink circuit with roots in 'outputs' and 'latch_defs':
-    for (int i = 0; i < c.outputs.size(); i++)
-        ::biereShrink(c.circ, tmp, gate(c.outputs[i]), map);
-
-    for (int i = 0; i < c.latches.size(); i++)
-        ::biereShrink(c.circ, tmp, gate(c.latch_defs[c.latches[i]]), map);
-
-    // Move circuit back:
-    tmp.moveTo(c.circ);
-
-    // Remap inputs:
-    for (int i = 0; i < c.inputs.size(); i++){
-        // Should I make the follwing assertion hold?
-        // assert(c.inputs[i] == gate(map[c.inputs[i]]));
-        c.inputs[i] = gate(map[c.inputs[i]]);
-    }
-
-    // Remap outputs:
-    for (int i = 0; i < c.outputs.size(); i++){
-        assert(map[gate(c.outputs[i])] != sig_Undef);
-        c.outputs[i] = map[gate(c.outputs[i])] ^ sign(c.outputs[i]);
-    }
-
-    // Remap latches & latch_defs:
-    c.latch_defs.clear();
-    c.circ.adjustMapSize(c.latch_defs, sig_Undef);
-    for (int i = 0; i < c.latches.size(); i++){
-        assert(map[c.latches[i]] != sig_Undef);
-        assert(!sign(map[c.latches[i]]));
-        assert(c.latch_defs[c.latches[i]] != sig_Undef);
-        assert(map[gate(c.latch_defs[c.latches[i]])] != sig_Undef);
-
-        Sig x = map[c.latches[i]];
-        Sig d = map[gate(c.latch_defs[c.latches[i]])] ^ sign(c.latch_defs[c.latches[i]]);
-
-        c.latches[i]          = gate(x);
-        c.latch_defs[gate(x)] = d;
-    }
-
-    removeDeadLogic(c);
-
-    fprintf(stderr, "|  # contradictions = %8d                                                |\n", biere_num_contr);
-    fprintf(stderr, "|  # subsumptions   = %8d                                                |\n", biere_num_subsump);
-    fprintf(stderr, "|  # idempotencies  = %8d                                                |\n", biere_num_idem);
-    fprintf(stderr, "|  # resolutions    = %8d                                                |\n", biere_num_res);
-    fprintf(stderr, "|  # substitutions  = %8d                                                |\n", biere_num_subst);
-    fprintf(stderr, "===============================================================================\n");
+    dagShrink(c, b, flp, dummy_seed, true);
 }

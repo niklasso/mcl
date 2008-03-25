@@ -36,8 +36,8 @@ struct AigerCirc {
     GMap<Sig>  latch_defs;
 };
 
-void readAiger (const char* filename, AigerCirc& c);
-void writeAiger(const char* filename, const AigerCirc& c);
+void readAiger (const char* filename,       Circ& c,       Box& b,       Flops& flp);
+void writeAiger(const char* filename, const Circ& c, const Box& b, const Flops& flp);
 
 //=================================================================================================
 

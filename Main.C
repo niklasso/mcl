@@ -100,25 +100,28 @@ int main(int argc, char** argv)
         printf("============================[ Problem Statistics ]=============================\n");
         printf("|                                                                             |\n");
 
-        AigerCirc c;
-        readAiger(argv[1], c);
+        Circ  c;
+        Box   b;
+        Flops flp;
+        readAiger(argv[1], c, b, flp);
 
-        if (c.latches.size() > 0)
+        if (flp.size() > 0)
             fprintf(stderr, "ERROR! Sequential circuits not supported!\n"), exit(1);
 
         //if (c.outputs.size() != 1)
         //    fprintf(stderr, "ERROR! Exactly 1 output expected, found %d!\n", c.outputs.size()), exit(1);
         if (split_output)
-            splitOutputs(c);
+            splitOutputs(c, b, flp);
 
-        printf("|  Number of inputs:     %12d                                         |\n", c.circ.nInps());
-        printf("|  Number of outputs:    %12d                                         |\n", c.outputs.size());
-        printf("|  Number of gates:      %12d                                         |\n", c.circ.nGates());
+        printf("|  Number of inputs:     %12d                                         |\n", c.nInps());
+        printf("|  Number of outputs:    %12d                                         |\n", b.outs.size());
+        printf("|  Number of gates:      %12d                                         |\n", c.nGates());
 
         double parsed_time = cpuTime();
         printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
-        dagShrink(c, dash_iters);
+        //dagShrinkIter(c, b, flp, (int)dash_iters);
+        dagShrinkIter(c, b, flp, 0.005);
 
         // void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
         // {
@@ -131,43 +134,33 @@ int main(int argc, char** argv)
 
         if (aiger != NULL){
             printf("==============================[ Writing AIGER ]================================\n");
-            writeAiger(aiger, c);
+            writeAiger(aiger, c, b, flp);
             exit(0);
         }
 
         vec<Lit> unit;
         if (clausify_naive){
-            NaiveClausifyer<SimpSolver> cl(c.circ, S);
-            for (int i = 0; i < c.outputs.size(); i++){
+            NaiveClausifyer<SimpSolver> cl(c, S);
+            for (int i = 0; i < b.outs.size(); i++){
                 unit.clear();
-                unit.push(cl.clausify(c.outputs[i]));
+                unit.push(cl.clausify(b.outs[i]));
                 assert(S.okay());
                 assert(S.value(unit.last()) == l_Undef);
                 S.addClause(unit);
             }
 
-            for (int i = 0; i < c.inputs.size(); i++)
-                input_vars.push(cl.clausify(c.inputs[i])); 
+            for (int i = 0; i < b.inps.size(); i++)
+                input_vars.push(cl.clausify(b.inps[i])); 
 
         }else {
-            Clausifyer<SimpSolver> cl(c.circ, S);
+            Clausifyer<SimpSolver> cl(c, S);
             cl.prepare();
-#if 0
-            for (int i = 0; i < c.outputs.size(); i++){
-                unit.clear();
-                unit.push(cl.clausify(c.outputs[i]));
-                assert(S.okay());
-                assert(S.value(unit.last()) == l_Undef);
-                S.addClause(unit);
-            }
-#else
-            for (int i = 0; i < c.outputs.size(); i++)
-                cl.assume(c.outputs[i]);
-            
-#endif
 
-            for (int i = 0; i < c.inputs.size(); i++)
-                input_vars.push(cl.clausify(c.inputs[i])); 
+            for (int i = 0; i < b.outs.size(); i++)
+                cl.assume(b.outs[i]);
+
+            for (int i = 0; i < b.inps.size(); i++)
+                input_vars.push(cl.clausify(b.inps[i]));
         }
 
         printf("|  Number of variables:  %12d                                         |\n", S.nVars());

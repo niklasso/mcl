@@ -186,6 +186,7 @@ void Minisat::bottomUpOrder(const Circ& c, const vec<Sig>& xs, GSet& gset)
 }
 
 
+// FIXME: remove or update when needed
 void Minisat::bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& latch_defs, GSet& gset)
 {
     bool repeat;

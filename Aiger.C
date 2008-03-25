@@ -45,7 +45,7 @@ static Sig aigToSig(vec<Sig>& id2sig, int aiger_lit) {
 }
 
 
-void Minisat::readAiger(const char* filename, AigerCirc& c)
+void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
 {
     gzFile f = gzopen(filename, "rb");
 
@@ -73,30 +73,30 @@ void Minisat::readAiger(const char* filename, AigerCirc& c)
     if (max_var != n_inputs + n_latches + n_gates)
         fprintf(stderr, "ERROR! Header mismatching sizes (M != I + L + A)\n"), exit(1);
 
-    c.circ.clear();
-    c.inputs.clear();
-    c.latches.clear();
-    c.outputs.clear();
-    c.latch_defs.clear();
+    c.clear();
+    b.clear();
+    flp.clear();
 
     vec<Sig> id2sig(max_var, sig_Undef);
 
     // Create input gates:
     for (int i = 0; i < n_inputs; i++){
-        Sig x = c.circ.mkInp();
-        c.inputs.push(gate(x));
+        Sig x = c.mkInp();
+        b.inps.push(gate(x));
         id2sig[i+1] = x;
-    }
-
-    // Create latch gates:
-    for (int i = 0; i < n_latches; i++){
-        Sig x = c.circ.mkInp();
-        c.latches.push(gate(x));
-        id2sig[i+n_inputs+1] = x;
     }
 
     vec<unsigned int> aiger_outputs;
     vec<unsigned int> aiger_latch_defs;
+    vec<Gate>         latch_gates;
+
+    // Create latch gates:
+    for (int i = 0; i < n_latches; i++){
+        Sig x = c.mkInp();
+        id2sig[i+n_inputs+1] = x;
+        latch_gates.push(gate(x));
+        b.inps.push(gate(x));
+    }
 
     // Read latch definitions:
     for (int i = 0; i < n_latches; i++){
@@ -114,26 +114,27 @@ void Minisat::readAiger(const char* filename, AigerCirc& c)
         unsigned delta1 = readPacked(in);
         unsigned x      = 2*i - delta0;
         unsigned y      = x   - delta1;
-
-        // fprintf(stderr, "read gate %d = %d & %d\n", 2*i, x, y);
-
-        id2sig[i]       = c.circ.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
+        id2sig[i]       = c.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
 
         assert   ((int)delta0 < 2*i);
         assert   (delta1 <= 2*i - delta0);
+        // fprintf(stderr, "read gate %d = %d & %d\n", 2*i, x, y);
     }
-    // printf("Read %d number of gates\n", c.nGates());
 
     // Map outputs:
     for (int i = 0; i < aiger_outputs.size(); i++)
-        c.outputs.push(aigToSig(id2sig, aiger_outputs[i]));
+        b.outs.push(aigToSig(id2sig, aiger_outputs[i]));
 
     // Map latches:
-    c.circ.adjustMapSize(c.latch_defs, sig_Undef);
-    for (int i = 0; i < aiger_latch_defs.size(); i++)
-        c.latch_defs[c.latches[i]] = aigToSig(id2sig, aiger_latch_defs[i]);
+    flp.adjust(c);
+    for (int i = 0; i < aiger_latch_defs.size(); i++){
+        Sig x = aigToSig(id2sig, aiger_latch_defs[i]);
+        flp.defineFlop(latch_gates[i], x);
+        b.outs.push(x);
+    }
 
     gzclose(f);
+    // printf("Read %d number of gates\n", c.nGates());
 }
 
 static void writePacked(FILE* file, unsigned int x)
@@ -158,7 +159,7 @@ static unsigned int sigToAig(GMap<unsigned int>& gate2id, Sig x) {
 }
 
 
-void Minisat::writeAiger(const char* filename, const AigerCirc& c)
+void Minisat::writeAiger(const char* filename, const Circ& c, const Box& b, const Flops& flp)
 {
     // fprintf(stderr, "aig %u %u %u %d %d\n", c.size(), inputs.size(), latch_defs.size(), outputs.size(), c.nGates());
 
@@ -171,25 +172,18 @@ void Minisat::writeAiger(const char* filename, const AigerCirc& c)
 
     // Generate the same set, but in an order compatible with the AIGER format:
     GSet uporder;
-    for (int i = 0; i < c.inputs.size(); i++)
-        //if (reachable.has(c.inputs[i]))
-            n_inputs++, uporder.insert(c.inputs[i]);
-
-    vec<Gate> ls;
-    for (int i = 0; i < c.latches.size(); i++)
-        // if (reachable.has(c.latches[i]))
-        {
-            n_latches++; 
-            ls.push(c.latches[i]);
-            uporder.insert(c.latches[i]);
-        }
-
-    bottomUpOrder(c.circ, c.outputs, uporder);
-    bottomUpOrder(c.circ, c.latches, c.latch_defs, uporder);
+    for (int i = 0; i < b.inps.size(); i++){
+        uporder.insert(b.inps[i]);
+        if (flp.isFlop(b.inps[i]))
+            n_latches++;
+        else
+            n_inputs++;
+    }
+    bottomUpOrder(c, b.outs, uporder);
 
     unsigned int n_gates = uporder.size() - n_inputs - n_latches;
 
-    GMap<unsigned int> gate2id; c.circ.adjustMapSize(gate2id);
+    GMap<unsigned int> gate2id; c.adjustMapSize(gate2id);
     for (int i = 0; i < uporder.size(); i++)
         gate2id[uporder[i]] = i + 1;
 
@@ -199,22 +193,27 @@ void Minisat::writeAiger(const char* filename, const AigerCirc& c)
         fprintf(stderr, "ERROR! Could not open file <%s> for writing\n", filename), exit(1);
 
     // fprintf(stderr, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, c.outputs.size(), n_gates);
-    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, c.outputs.size(), n_gates);
+    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_latches, b.outs.size() - n_latches, n_gates);
 
     // Write latch-defs:
-    for (int i = 0; i < ls.size(); i++)
-        fprintf(f, "%u\n", sigToAig(gate2id, c.latch_defs[ls[i]]));
+    for (int i = 0; i < flp.size(); i++)
+        fprintf(f, "%u\n", sigToAig(gate2id, flp.def(flp[i])));
 
     // Write outputs:
-    for (int i = 0; i < c.outputs.size(); i++)
-        fprintf(f, "%u\n", sigToAig(gate2id, c.outputs[i]));
+    /* debug */ unsigned int cnt = 0;
+    for (int i = 0; i < b.outs.size(); i++)
+        if (!flp.isDef(b.outs[i]))
+            fprintf(f, "%u\n", sigToAig(gate2id, b.outs[i]));
+        else
+            cnt++;
+    assert(cnt == n_latches);
 
     // Write gates:
     for (int i = 0; i < (int)n_gates; i++){
         Gate         g    = uporder[n_inputs + n_latches + i];     assert(type(g) == gtype_And);
         unsigned int glit = (n_inputs + n_latches + i + 1) << 1;
-        unsigned int llit = sigToAig(gate2id, c.circ.lchild(g));
-        unsigned int rlit = sigToAig(gate2id, c.circ.rchild(g));
+        unsigned int llit = sigToAig(gate2id, c.lchild(g));
+        unsigned int rlit = sigToAig(gate2id, c.rchild(g));
 
         if (llit < rlit){
             unsigned int tmp = llit; llit = rlit; rlit = tmp; }

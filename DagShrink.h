@@ -27,13 +27,12 @@ namespace Minisat {
 
 
 Sig  dagShrink       (Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
-void dagShrink       (AigerCirc& c, double& rnd_seed, bool only_copy = false);
-void dagShrink       (AigerCirc& c, int n_iters = 5);
 
-void biereShrink     (AigerCirc& c);
-
-void splitOutputs    (AigerCirc& c);
-void removeDeadLogic (AigerCirc& c);
+void dagShrink       (Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy = false);
+void dagShrinkIter   (Circ& c, Box& b, Flops& flp, int    n_iters = 5);
+void dagShrinkIter   (Circ& c, Box& b, Flops& flp, double frac);
+void splitOutputs    (Circ& c, Box& b, Flops& flp);
+void removeDeadLogic (Circ& c, Box& b, Flops& flp);
 
 };
 
