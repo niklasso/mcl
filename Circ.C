@@ -132,6 +132,21 @@ void Circ::restrashAll()
 }
 
 
+void Circ::dump()
+{
+    for (Gate g = firstGate(); g != gate_Undef; g = nextGate(g)){
+        if (type(g) == gtype_And){
+            Sig x = gates[g].x;
+            Sig y = gates[g].y;
+        
+            printf("gate %d := %s%d & %s%d\n", index(g), sign(x)?"-":"", index(gate(x)), sign(y)?"-":"", index(gate(y)));
+        }else{
+           printf("gate %d := <input>\n", index(g));
+        }
+    }   
+}
+
+
 //=================================================================================================
 // Circ utility functions:
 

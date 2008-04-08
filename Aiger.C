@@ -41,7 +41,11 @@ static unsigned int readPacked(StreamBuffer& in){
 static Sig aigToSig(vec<Sig>& id2sig, int aiger_lit) { 
     if (aiger_lit == 0)      return sig_False;
     else if (aiger_lit == 1) return sig_True;
-    else return id2sig[aiger_lit >> 1] ^ bool(aiger_lit & 1);
+    else {
+      assert((aiger_lit >> 1) < id2sig.size());
+      assert((aiger_lit >> 1) >= 0);
+      return id2sig[aiger_lit >> 1] ^ bool(aiger_lit & 1);
+    }
 }
 
 
@@ -77,7 +81,7 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
     b.clear();
     flp.clear();
 
-    vec<Sig> id2sig(max_var, sig_Undef);
+    vec<Sig> id2sig(max_var+1, sig_Undef);
 
     // Create input gates:
     for (int i = 0; i < n_inputs; i++){
@@ -116,8 +120,9 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
         unsigned y      = x   - delta1;
         id2sig[i]       = c.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
 
-        assert   ((int)delta0 < 2*i);
-        assert   (delta1 <= 2*i - delta0);
+        assert(i < id2sig.size());
+        assert((int)delta0 < 2*i);
+        assert(delta1 <= 2*i - delta0);
         // fprintf(stderr, "read gate %d = %d & %d\n", 2*i, x, y);
     }
 

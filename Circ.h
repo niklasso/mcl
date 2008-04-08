@@ -99,9 +99,14 @@ class Circ
 
     // Adjust map size:
     template<class T>
-    void adjustMapSize(GMap<T>& map, const T& def = T()) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), def); }
+    void adjustMapSize(GMap<T>& map, const T& def) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), def); }
     template<class T>
-    void adjustMapSize(SMap<T>& map, const T& def = T()) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
+    void adjustMapSize(GMap<T>& map) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp)); }
+
+    template<class T>
+    void adjustMapSize(SMap<T>& map, const T& def) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
+    template<class T>
+    void adjustMapSize(SMap<T>& map) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true)); }
 
     // Node constructor functions:
     Sig mkInp    ();
@@ -136,6 +141,9 @@ class Circ
     int costXorEven(Sig x, Sig y);
     int costMuxOdd (Sig x, Sig y, Sig z);
     int costMuxEven(Sig x, Sig y, Sig z);
+
+    // Debug
+    void dump();
 };
 
 
@@ -303,10 +311,10 @@ inline void Circ::strashInsert(Gate g)
 
 
 
-inline Sig  Circ::lchild(Gate g) const   { assert(type(g) == gtype_And); return gates[g].x; }
-inline Sig  Circ::rchild(Gate g) const   { assert(type(g) == gtype_And); return gates[g].y; }
-inline Sig  Circ::lchild(Sig  x) const   { assert(type(x) == gtype_And); return gates[gate(x)].x; }
-inline Sig  Circ::rchild(Sig  x) const   { assert(type(x) == gtype_And); return gates[gate(x)].y; }
+inline Sig  Circ::lchild(Gate g) const   { assert(type(g) == gtype_And && g != gate_True && g != gate_Undef); return gates[g].x; }
+inline Sig  Circ::rchild(Gate g) const   { assert(type(g) == gtype_And && g != gate_True && g != gate_Undef); return gates[g].y; }
+inline Sig  Circ::lchild(Sig  x) const   { assert(type(x) == gtype_And && gate(x) != gate_True && x != sig_Undef); return gates[gate(x)].x; }
+inline Sig  Circ::rchild(Sig  x) const   { assert(type(x) == gtype_And && gate(x) != gate_True && x != sig_Undef); return gates[gate(x)].y; }
 inline Sig  Circ::mkInp    ()            { n_inps++; Gate g = mkGate(allocId(), gtype_Inp); gates[g].x = sig_Undef; return mkSig(g, false); }
 inline Sig  Circ::mkOr     (Sig x, Sig y){ return ~mkAnd(~x, ~y); }
 inline Sig  Circ::mkXorOdd (Sig x, Sig y){ return mkOr (mkAnd(x, ~y), mkAnd(~x, y)); }
@@ -317,6 +325,9 @@ inline Sig  Circ::mkMuxEven(Sig x, Sig y, Sig z) { return mkAnd(mkOr (~x, y), mk
 inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
 
 inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only){
+    assert(x != sig_Undef);
+    assert(y != sig_Undef);
+
     // Simplify:
     if (rewrite_mode >= 1){
         if      (x == sig_True)  return y;

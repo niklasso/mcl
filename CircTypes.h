@@ -96,8 +96,16 @@ class GMap : private vec<T>
 {
  public:
     // Vector interface:
-    const T& operator [] (Gate g) const { return ((const vec<T>&)(*this))[index(g)]; }
-    T&       operator [] (Gate g)       { return ((vec<T>&)(*this))      [index(g)]; }
+    const T& operator [] (Gate g) const {
+        assert(g != gate_Undef);
+        assert(index(g) < (unsigned)((const vec<T>&)(*this)).size());
+        return ((const vec<T>&)(*this))[index(g)];
+    }
+    T&       operator [] (Gate g)       {
+        assert(g != gate_Undef);
+        assert(index(g) < (unsigned)((const vec<T>&)(*this)).size());
+        return ((vec<T>&)(*this))      [index(g)];
+    }
 
     // Note the slightly different semantics to vec's growTo, namely that
     // this guarantees that the element 'g' can be indexed after this operation.

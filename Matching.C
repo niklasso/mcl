@@ -141,6 +141,9 @@ bool Minisat::matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs
 
 void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
 {
+    assert(g != gate_Undef);
+    assert(g != gate_True);
+
     c.adjustMapSize(tmp_fanouts, 0);
     tmp_set.clear();
     tmp_set.insert(g);
@@ -159,6 +162,9 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
         //         tmp_fanouts[gate(x)],
         //         c.nFanouts(gate(x))
         //         );
+
+        assert(gate(x) != gate_Undef);
+        assert(gate(x) != gate_True);
 
         Sig tmp_x, tmp_y, tmp_z;
         if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
