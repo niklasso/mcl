@@ -23,6 +23,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
+#define MATCH_MUXANDXOR
+//#define MATCH_TWOLEVEL
+
 //=================================================================================================
 // Statistics:
 //
@@ -84,22 +87,8 @@ void DagShrinkStatsFrame::clear()
 
 void DagShrinkStatsFrame::print()
 {
-#if 0
-    fprintf(stderr, "==========================[ DAG Aware Minimization ]===========================\n");
-    fprintf(stderr, "|  Input gates      = %8d                                                |\n", total_nodes_before);
-    fprintf(stderr, "|  Input and nodes  = %8d  ( %6.2g avg. size)                           |\n", nof_and_nodes, (float)total_and_size / nof_and_nodes);
-    fprintf(stderr, "|  Input xor nodes  = %8d  ( %6.2g avg. size)                           |\n", nof_xor_nodes, (float)total_xor_size / nof_xor_nodes);
-    fprintf(stderr, "|  Input mux nodes  = %8d                                                |\n", nof_mux_nodes);
-    fprintf(stderr, "|  Output gates     = %8d                                                |\n", total_nodes_after);
-    fprintf(stderr, "|  Muxes introduced = %8d                                                |\n", nof_muxes_found);
-    fprintf(stderr, "|  Shared and nodes = %8d                                                |\n", nof_shared_and_nodes);
-    fprintf(stderr, "|  Shared xor nodes = %8d                                                |\n", nof_shared_xor_nodes);
-    fprintf(stderr, "|  Shared mux nodes = %8d                                                |\n", nof_shared_mux_nodes);
-    fprintf(stderr, "|  cpu-time         = %8.2f                                                |\n", cpuTime() - time_before);
-#else
     // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
-    fprintf(stderr, "| %10d | %8d %8d %8d | %6d %6d %6d | %10d |\n", total_nodes_after, nof_and_nodes, nof_xor_nodes, nof_mux_nodes, nof_shared_and_nodes, nof_shared_xor_nodes, nof_shared_mux_nodes, nof_muxes_found);
-#endif
+    printf("| %10d | %8d %8d %8d | %6d %6d %6d | %10d |\n", total_nodes_after, nof_and_nodes, nof_xor_nodes, nof_mux_nodes, nof_shared_and_nodes, nof_shared_xor_nodes, nof_shared_mux_nodes, nof_muxes_found);
 }
 
 
@@ -231,7 +220,7 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
                 
                 Sig x, y, z;
                 if (in.matchMuxParts(gate(xs[i]), gate(xs[j]), x, y, z)){
-                    int gates_before = in.nGates();
+                    // int gates_before = in.nGates();
                     xs.push(in.mkMux(x, y, z));
                     // assert(gates_before + 1 == in.nGates());
                     xs[i] = xs[j] = sig_Undef;
@@ -300,8 +289,9 @@ static Sig rebuildXors(Circ& in, vec<Sig>& xs, double& rnd_seed)
                 int cost_even = in.costXorEven(xs[i], xs[j]);
                 int cost_odd  = in.costXorOdd (xs[i], xs[j]);
 
+#ifndef NDEBUG
                 int gates_before = in.nGates();
-
+#endif
                 if (cost_even < 3 && cost_even <= cost_odd){
                     xs.push(in.mkXorEven(xs[i], xs[j]));
                     xs[i] = xs[j] = sig_Undef;
@@ -353,6 +343,18 @@ static Sig rebuildMux(Circ& in, Sig x, Sig y, Sig z)
 }
 
 
+static inline void printSigs(const vec<Sig>& xs)
+{
+    fprintf(stderr, "{ ");
+    for (int i = 0; i < xs.size(); i++)
+        fprintf(stderr, "%s%s%d ", sign(xs[i])?"-":"", type(xs[i]) == gtype_Inp ? "$" : "@", index(gate(xs[i])));
+    fprintf(stderr, "}");
+}
+
+
+
+
+#ifdef MATCH_TWOLEVEL
 static Sig rebuildTwoLevelEven(Circ& in, const vec<vec<Sig> >& xss, double& rnd_seed)
 {
     vec<Sig> top;
@@ -366,15 +368,6 @@ static Sig rebuildTwoLevelEven(Circ& in, const vec<vec<Sig> >& xss, double& rnd_
     }
 
     return rebuildAnds(in, top, rnd_seed);
-}
-
-
-static void printSigs(const vec<Sig>& xs)
-{
-    fprintf(stderr, "{ ");
-    for (int i = 0; i < xs.size(); i++)
-        fprintf(stderr, "%s%s%d ", sign(xs[i])?"-":"", type(xs[i]) == gtype_Inp ? "$" : "@", index(gate(xs[i])));
-    fprintf(stderr, "}");
 }
 
 
@@ -489,7 +482,7 @@ static Sig rebuildTwoLevel(Circ& in, vec<vec<Sig> >& xss, double& rnd_seed)
         }
     }
 }
-
+#endif
 
 //=================================================================================================
 // Main dagshrink functions:
@@ -505,6 +498,7 @@ void dagShrink(Circ& in, Circ& out, vec<Sig>& xs, GMap<Sig>& map, double& rnd_se
         xs[i] = a ^ sign(xs[i]);
     }
 }
+#ifdef MATCH_TWOLEVEL
 static 
 void dagShrink(Circ& in, Circ& out, vec<vec<Sig> >& xss, GMap<Sig>& map, double& rnd_seed)
 {
@@ -519,7 +513,7 @@ void dagShrink(Circ& in, Circ& out, vec<vec<Sig> >& xss, GMap<Sig>& map, double&
     }
     normalizeTwoLevel(xss);
 }
-
+#endif
 
 Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed)
 {
@@ -530,7 +524,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
 
     Sig x, y, z, result;
 
-#if 1
+#ifdef MATCH_MUXANDXOR
     vec<Sig> xs; 
     if (in.matchXors(g, xs)){
         ::dagShrink(in, out, xs, map, rnd_seed);
@@ -550,7 +544,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
         dash_stats.current().nof_mux_nodes++;
 #endif
     
-#if 1
+#ifndef MATCH_TWOLEVEL
     }else if (type(g) == gtype_And){
         in.matchAnds(g, xs);
 
@@ -653,11 +647,11 @@ void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, int n_iters)
 {
     double rnd_seed = 123456789;
 
-    fprintf(stderr, "==========================[ DAG Aware Minimization ]===========================\n");
-    fprintf(stderr, "| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
-    fprintf(stderr, "|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
-    // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
-    fprintf(stderr, "===============================================================================\n");
+    printf("==========================[ DAG Aware Minimization ]===========================\n");
+    printf("| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
+    printf("|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
+    // printf("| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
+    printf("===============================================================================\n");
 
     for (int i = 0; i < n_iters; i++){
         dash_stats.clear();
@@ -671,11 +665,11 @@ void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, double frac)
 {
     double rnd_seed = 123456789;
 
-    fprintf(stderr, "==========================[ DAG Aware Minimization ]===========================\n");
-    fprintf(stderr, "| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
-    fprintf(stderr, "|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
-    // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
-    fprintf(stderr, "===============================================================================\n");
+    printf("==========================[ DAG Aware Minimization ]===========================\n");
+    printf("| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
+    printf("|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
+    // printf("| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
+    printf("===============================================================================\n");
 
     int size_before, size_after;
     do {
@@ -707,23 +701,23 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
             
             if (!flp.isDef(x) && !sign(x) && type(x) == gtype_And){
                 c.matchAnds(gate(x), xs, true);
-                // fprintf(stderr, " >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
+                // printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                 
                 for (int j = 0; j < xs.size(); j++){
                     if (!sign(xs[j]) && type(xs[j]) == gtype_And)
                         again = true;
 
-                    // fprintf(stderr, " >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
+                    // printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
                     
                     all_outputs.insert(xs[j]);
                 }
                 
-                // fprintf(stderr, " >>> GATES = ");
+                // printf(" >>> GATES = ");
                 // for (int j = 0; j < xs.size(); j++){
                 //     all_outputs.insert(xs[j]);
-                //     fprintf(stderr, "%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
+                //     printf("%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
                 // }
-                // fprintf(stderr, "\n");
+                // printf("\n");
             }
             else
                 all_outputs.insert(x);
@@ -738,7 +732,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         // if (!again) 
         //     break;
         // else
-        //     fprintf(stderr, "AGAIN\n");
+        //     printf("AGAIN\n");
     }
 
     removeDeadLogic(c, b, flp);

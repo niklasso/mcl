@@ -258,7 +258,7 @@ static void subsumptionResolutionSaturation(vec<vec<Sig> >& xss, const vec<vec<S
 }
 
 
-static bool implies(const vec<vec<Sig> >& cnf, const vec<Sig>& clause)
+static inline bool implies(const vec<vec<Sig> >& cnf, const vec<Sig>& clause)
 {
     vec<vec<Sig> > tmp;
 
@@ -299,8 +299,9 @@ static bool implies(const vec<vec<Sig> >& cnf, const vec<Sig>& clause)
     return tmp.size() == 1 && tmp[0].size() == 0;
 }
 
-
-static bool resolve(const vec<Sig>& xs, const vec<Sig>& ys, vec<Sig>& zs)
+#if 0
+// What were this intended for?
+static inline bool resolve(const vec<Sig>& xs, const vec<Sig>& ys, vec<Sig>& zs)
 {
     Sig pivot = sig_Undef;
 
@@ -320,10 +321,12 @@ static bool resolve(const vec<Sig>& xs, const vec<Sig>& ys, vec<Sig>& zs)
     for (int i = 0; i < ys.size(); i++)
         if (ys[i] != ~pivot)
             zs.push(ys[i]);
+
+    return true;
 }
 
 
-static void removeRedundant(vec<vec<Sig> >& xss)
+static inline void removeRedundant(vec<vec<Sig> >& xss)
 {
     vec<vec<Sig> > tmp;
     for (int i = 0; i < xss.size(); i++){
@@ -341,7 +344,7 @@ static void removeRedundant(vec<vec<Sig> >& xss)
         }
     }
 }
-
+#endif
 
 void Minisat::normalizeTwoLevel(vec<vec<Sig> >& xss, const vec<vec<Sig> >& context)
 {

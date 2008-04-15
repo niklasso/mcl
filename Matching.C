@@ -210,7 +210,7 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
 }
 
 
-static void printSigs(const vec<Sig>& xs)
+static inline void printSigs(const vec<Sig>& xs)
 {
     fprintf(stderr, "{ ");
     for (int i = 0; i < xs.size(); i++)

@@ -145,9 +145,10 @@ void Minisat::fullAdderCorrect(void)
                 evaluate(c, sum,   values);
                 evaluate(c, carry, values);
 
+#ifndef NDEBUG
                 bool sum_   = (values[gate(sum)]   ^ sign(sum)) == l_True;
                 bool carry_ = (values[gate(carry)] ^ sign(carry)) == l_True;
-                
+#endif                
                 //printf("x = %d, y = %d, z = %d, sum = %d, carry = %d\n", 
                 //       toInt(values[gate(x)]), toInt(values[gate(y)]), toInt(values[gate(z)]), 
                 //       toInt(values[gate(sum)] ^ sign(sum)), toInt(values[gate(carry)] ^ sign(sum)));
@@ -159,13 +160,13 @@ void Minisat::fullAdderCorrect(void)
 }
 
 
-static void setValue(vec<Sig>& xs, int n, GMap<lbool>& values)
+static inline void setValue(vec<Sig>& xs, int n, GMap<lbool>& values)
 {
     for (int i = 0; i < xs.size(); i++)
         values[gate(xs[i])] = lbool((bool)(n & (1 << i)));
 }
 
-static int readValue(vec<Sig>& xs, GMap<lbool>& values)
+static inline int readValue(vec<Sig>& xs, GMap<lbool>& values)
 {
     int n = 0;
     for (int i = 0; i < xs.size(); i++){
@@ -187,7 +188,9 @@ void Minisat::multiplierCorrect(int size)
     vec<Sig> result;
 
     multiplier(c, xs, ys, result);
+#ifndef NDEBUG
     int size_before = c.nGates();
+#endif
     multiplier(c, xs, ys, result);
     assert(c.nGates() == size_before);
 
@@ -198,8 +201,9 @@ void Minisat::multiplierCorrect(int size)
             setValue(ys, j, values);
             for (int k = 0; k < result.size(); k++)
                 evaluate(c, result[k], values);
+#ifndef NDEBUG
             int n = readValue(result, values);
-
+#endif
             //printf("%d * %d = %d\n", i, j, n);
             assert(i * j == n);
         }
