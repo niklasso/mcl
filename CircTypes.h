@@ -27,7 +27,7 @@ namespace Minisat {
 //=================================================================================================
 // Helper types (analogues of Var/Lit types from MiniSat):
 
-typedef enum { gtype_Inp = 0, gtype_And = 1 } GateType;
+typedef enum { gtype_Inp = 0, gtype_And = 1, gtype_Const = 2 } GateType;
 
 //-------------------------------------------------------------------------------------------------
 // Gate-type: (analogue of MiniSat's Var)
@@ -41,12 +41,12 @@ struct Gate {
     bool operator <  (Gate p) const { return x < p.x;  }
 };
 
-// Use this as a constructor:
-inline Gate         mkGate  (unsigned int id, GateType t){ Gate g; g.x = (id << 2) + t; return g; }
-inline GateType     type    (Gate g) { return GateType(g.x & 1); }
-
 const Gate gate_Undef = { ((1U << 30)-1) << 2 };
 const Gate gate_True  = { 0 };
+
+// Use this as a constructor:
+inline Gate         mkGate  (unsigned int id, GateType t){ Gate g; g.x = (id << 2) + t; return g; }
+inline GateType     type    (Gate g){ return g == gate_True ? gtype_Const : GateType(g.x & 1); }
 
 // Note! Use GMap instead of this:
 inline unsigned int index (Gate g) { return g.x >> 2; }
@@ -62,6 +62,13 @@ struct Sig {
     bool operator <  (Sig p) const { return x < p.x;  } // '<' makes p, ~p adjacent in the ordering.
 };
 
+//const Sig lit_Undef = mkSig(var_Undef, false);  // }- Useful special constants.
+//const Sig lit_Error = mkSig(var_Undef, true );  // }
+
+const Sig sig_Undef = { ((1U << 30)-1) << 2 };  // }- Useful special constants.
+const Sig sig_Error = { (((1U << 30)-1) << 2) + 2};  // }
+const Sig sig_True  = { 0 };
+const Sig sig_False = { 2 };
 
 // Use this as a constructor:
 inline  Sig mkSig(Gate g, bool sign = false){ 
@@ -71,18 +78,10 @@ inline  Sig      operator ~(Sig p)                       { Sig q; q.x = p.x ^ 2;
 inline  Sig      operator ^(Sig p, bool b)               { Sig q; q.x = p.x ^ (((unsigned int)b)<<1); return q; }
 inline  bool     sign      (Sig p)                       { return bool(p.x & 2); }
 inline  Gate     gate      (Sig p)                       { return mkGate(p.x >> 2, GateType(p.x & 1)); }
-inline  GateType type      (Sig p)                       { return GateType(p.x & 1); }
+inline  GateType type      (Sig p)                       { return type(gate(p)); }
 
 // Mapping Sigerals to and from compact integers suitable for array indexing:
 inline  Sig          toSig     (unsigned  i)         { Sig p; p.x = i; return p; } 
-
-//const Sig lit_Undef = mkSig(var_Undef, false);  // }- Useful special constants.
-//const Sig lit_Error = mkSig(var_Undef, true );  // }
-
-const Sig sig_Undef = { ((1U << 30)-1) << 2 };  // }- Useful special constants.
-const Sig sig_Error = { (((1U << 30)-1) << 2) + 2};  // }
-const Sig sig_True  = { 0 };
-const Sig sig_False = { 2 };
 
 // Note! Use SMap instead of this:
 inline unsigned int index (Sig s) { return s.x >> 1; }
