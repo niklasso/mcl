@@ -79,10 +79,13 @@ class Circ
 
     Circ();
 
+    // Misc. :
+    //
     int  size  () const { return gates.size()-1; }
     int  nGates() const { return n_ands; }
     int  nInps () const { return n_inps; }
-    int  nFanouts(Gate g) const { return n_fanouts[g]; }
+    int  nFanouts  (Gate g) const { return n_fanouts[g]; }
+    void bumpFanout(Gate g) { n_fanouts[g]++; }
 
     // Environment state manipulation:
     //
@@ -164,6 +167,14 @@ struct Box {
     }
 };
 
+// INVARIANT: flops are added last to both 'inps' (the coombinational variables representing the
+//            flops), and to 'outs' (the signals to be delayed by the flops). Given a set of flops
+//            'flp' of type Flops and a Box 'b', it is possible to iterate over only the *real*
+//            inputs of a circuit by something like the following:
+//
+//            for (int i = 0; i < b.inps.size() - flp.size(); i++)
+//               <do something with real inputs>
+
 
 //=================================================================================================
 // Flops -- a class for representing the sequential behaviour of a circuit:
@@ -196,6 +207,8 @@ class Flops {
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
             Sig  def = defs[f];
+            assert(map[f] != sig_Undef);
+            assert(map[gate(def)] != sig_Undef);
             to.defineFlop(gate(map[f]), map[gate(def)] ^ sign(def));
 
             assert(!sign(map[f]));
@@ -452,6 +465,9 @@ inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only){
         // Update fanout counters:
         if (n_fanouts[gate(x)] < 255) n_fanouts[gate(x)]++;
         if (n_fanouts[gate(y)] < 255) n_fanouts[gate(y)]++;
+
+        // if (n_fanouts[gate(x)] == 255) printf("High fanout detected!\n");
+        // if (n_fanouts[gate(y)] == 255) printf("High fanout detected!\n");
 
         // fprintf(stderr, "created node %3d = %c%d & %c%d\n", index(g), sign(x)?'~':' ', index(gate(x)), sign(y)?'~':' ', index(gate(y)));
         //printf(" -- created new node.\n");
