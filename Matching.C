@@ -138,7 +138,32 @@ bool Minisat::matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs
     return true;
 }
 
+#if 0
 
+static void matchAndsRec(const Circ& c, Sig x, vec<Sig>& xs, bool match_muxes)
+{
+    Sig tmp_x, tmp_y, tmp_z;
+    if (type(gate(x)) == gtype_And && !sign(x) && c.nFanouts(gate(x)) == 1 &&
+        (match_muxes || !matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        ){
+        matchAndsRec(c, c.lchild(gate(x)), xs, match_muxes);
+        matchAndsRec(c, c.rchild(gate(x)), xs, match_muxes);
+    }else
+        xs.push(x);
+}
+
+void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
+{
+    assert(g != gate_Undef);
+    assert(g != gate_True);
+    assert(type(g) == gtype_And);
+
+    matchAndsRec(c, c.lchild(g), xs, match_muxes);
+    matchAndsRec(c, c.rchild(g), xs, match_muxes);
+    normalizeAnds(xs);
+}
+
+#else
 void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
 {
     assert(g != gate_Undef);
@@ -167,13 +192,14 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
         assert(gate(x) != gate_True);
 
         Sig tmp_x, tmp_y, tmp_z;
+        // if (type(x) != gtype_And || sign(x) || c.nFanouts(gate(x)) > 1 || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
         if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
             continue;
 
         g = gate(x);
         if (tmp_fanouts[g] < 255)
             tmp_fanouts[g]++;
-
+        
         if (tmp_fanouts[g] < c.nFanouts(g))
             continue;
 
@@ -203,12 +229,15 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
 
     normalizeAnds(xs);
 
+    // static int total_size = 0; total_size += xs.size()-1;
+    // fprintf(stderr, "total_size = %d\n", total_size);
+
     // fprintf(stderr, "Matched a Big-and: ");
     // for (int i = 0; i < xs.size(); i++)
     //     fprintf(stderr, "%s%d ", sign(xs[i])?"-":"", index(gate(xs[i])));
     // fprintf(stderr, "\n");
 }
-
+#endif
 
 static inline void printSigs(const vec<Sig>& xs)
 {
