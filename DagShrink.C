@@ -475,7 +475,7 @@ static Sig rebuildTwoLevel(Circ& in, vec<vec<Sig> >& xss, double& rnd_seed)
         if (gates_odd < gates_even){
             in.commit();
             dash_stats.commit();
-
+            // printf("<<< GOT HERE...\n");
             return odd;
         }else{
             in.pop();
@@ -693,6 +693,41 @@ void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, double frac)
 // Utility functions:
 //
 
+static inline void splitDisj(Circ& c, Sig x, SSet& all_outputs)
+{
+    if (type(x) != gtype_And || !sign(x)){
+        all_outputs.insert(x);
+        return; }
+
+    printf(" >>> got here ... \n");
+
+    // Handle disjunction:
+    //
+    Sig l = c.lchild(x);
+    Sig r = c.rchild(x);
+
+    if (!sign(r)){ Sig tmp = l; l = r; r = tmp; }
+    
+    if (!sign(r))
+        all_outputs.insert(x);
+    else{
+        vec<Sig> xs;
+        if (sign(l)){
+            int size_l = (c.matchAnds(gate(l), xs, true), xs.size());
+            int size_r = (c.matchAnds(gate(r), xs, true), xs.size());
+            
+            if (size_l > size_r){ Sig tmp = l; l = r; r = tmp; }
+        }
+        
+        // x is signed, r is signed (i.e x == ~l or ~r):
+        c.matchAnds(gate(r), xs, true);
+
+        printf(" >>> DISTRIBUTED DISJ. OVER CONJ. OF SIZE %d\n", xs.size());
+        for (int j = 0; j < xs.size(); j++)
+            all_outputs.insert(c.mkOr(~l, xs[j]));
+    }
+}
+
 // Breaking down big output conjunctions, and merging equivalent output nodes:
 void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
 {
@@ -703,43 +738,52 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         bool again = false;
         all_outputs.clear();
 
-        for (int i = 0; i < b.outs.size(); i++){
+        for (int i = 0; i < b.outs.size() - flp.size(); i++){
             Sig x = b.outs[i];
             
-            if (!flp.isDef(x) && !sign(x) && type(x) == gtype_And){
-                c.matchAnds(gate(x), xs, true);
-                // printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
-                
-                for (int j = 0; j < xs.size(); j++){
-                    if (!sign(xs[j]) && type(xs[j]) == gtype_And)
-                        again = true;
+            if (type(x) == gtype_And){
+                if (!sign(x)){
+                    // Handle conjunction:
+                    //
+                    c.matchAnds(gate(x), xs, true);
 
-                    // printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
+                    printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                     
-                    all_outputs.insert(xs[j]);
-                }
+                    for (int j = 0; j < xs.size(); j++){
+                        if (!sign(xs[j]) && type(xs[j]) == gtype_And)
+                            again = true;
+
+                        printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
+                    
+                        // all_outputs.insert(xs[j]);
+                        splitDisj(c, xs[j], all_outputs);
+                    }
                 
-                // printf(" >>> GATES = ");
-                // for (int j = 0; j < xs.size(); j++){
-                //     all_outputs.insert(xs[j]);
-                //     printf("%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
-                // }
-                // printf("\n");
-            }
-            else
+                    printf(" >>> GATES = ");
+                    for (int j = 0; j < xs.size(); j++){
+                        all_outputs.insert(xs[j]);
+                        printf("%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
+                    }
+                    printf("\n");
+                }else{
+                    splitDisj(c, x, all_outputs);
+                }
+            }else
                 all_outputs.insert(x);
         }
 
         b.outs.clear();
         for (int i = 0; i < all_outputs.size(); i++)
             b.outs.push(all_outputs[i]);
+        for (int i = 0; i < flp.size(); i++)
+            b.outs.push(flp.def(flp[i]));
 
-        break;
+        // break;
 
-        // if (!again) 
-        //     break;
-        // else
-        //     printf("AGAIN\n");
+        if (!again) 
+            break;
+        else
+            printf("AGAIN\n");
     }
 
     removeDeadLogic(c, b, flp);
