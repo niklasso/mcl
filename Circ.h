@@ -156,6 +156,7 @@ struct Box {
 
     void clear () { inps.clear(); outs.clear(); }
     void moveTo(Box& to){ inps.moveTo(to.inps); outs.moveTo(to.outs); }
+    void copyTo(Box& to){ inps.copyTo(to.inps); outs.copyTo(to.outs); }
     void remap (const GMap<Sig>& map, Box& to){
         to.clear();
         for (int i = 0; i < inps.size(); i++) to.inps.push(gate(map[inps[i]]));
