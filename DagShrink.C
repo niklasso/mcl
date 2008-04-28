@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 using namespace Minisat;
 
 #define MATCH_MUXANDXOR
-//#define MATCH_TWOLEVEL
+#define MATCH_TWOLEVEL
 
 //=================================================================================================
 // Statistics:
@@ -178,6 +178,7 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
 
     // Search for already present and-nodes:
     int reused_nodes = 0;
+#if 1
     if (xs.size() < cut_off)
         for (int i = 1; i < xs.size(); i++){
             if (xs[i] == sig_Undef) continue;
@@ -204,6 +205,7 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
                 }
             }
         }
+#endif
 
     int found_muxes = 0;
 #if 1
@@ -524,8 +526,8 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
 
     Sig x, y, z, result;
 
-#ifdef MATCH_MUXANDXOR
     vec<Sig> xs; 
+#ifdef MATCH_MUXANDXOR
     if (in.matchXors(g, xs)){
         ::dagShrink(in, out, xs, map, rnd_seed);
         normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
@@ -542,10 +544,11 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
         result = rebuildMux(out, x, y, z);
 
         dash_stats.current().nof_mux_nodes++;
+    }else 
 #endif
     
 #ifndef MATCH_TWOLEVEL
-    }else if (type(g) == gtype_And){
+    if (type(g) == gtype_And){
         in.matchAnds(g, xs);
 
         ::dagShrink(in, out, xs, map, rnd_seed);
@@ -554,7 +557,7 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
         dash_stats.current().nof_and_nodes++; dash_stats.current().total_and_size += xs.size();
         result = rebuildAnds(out, xs, rnd_seed);
 #else
-    }else if (type(g) == gtype_And){
+    if (type(g) == gtype_And){
         //if (type(g) == gtype_And){
         vec<vec<Sig> > xss;
         in.matchTwoLevel(g, xss, false);
