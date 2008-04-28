@@ -224,12 +224,19 @@ void Minisat::matchTwoLevel(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_
     vec<Sig> top;
     matchAnds(c, g, tmp_set, tmp_stack, tmp_fanouts, top, match_muxes);
 
+    xss.clear();
+    if (top.size() == 1 && top[0] == sig_False) {
+        // Handle constant false:
+        xss.push();
+        return; }
+
     for (int i = 0; i < top.size(); i++){
         xss.push();
 
         if (type(top[i]) == gtype_Inp || !sign(top[i]) || c.nFanouts(gate(top[i])) > 1)
             xss.last().push(top[i]);
         else {
+            assert(type(top[i]) == gtype_And);
             matchAnds(c, gate(top[i]), tmp_set, tmp_stack, tmp_fanouts, xss.last(), match_muxes);
             for (int j = 0; j < xss.last().size(); j++)
                 xss.last()[j] = ~xss.last()[j];
