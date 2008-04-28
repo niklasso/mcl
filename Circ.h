@@ -189,6 +189,7 @@ class Flops {
     Gate operator[](int i) const { return gates[i]; }
 
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
+    void copyTo(Flops& to){ gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
     void remap (const Circ& c, const GMap<Sig>& map, Flops& to){
         to.clear();
         to.adjust(c);
