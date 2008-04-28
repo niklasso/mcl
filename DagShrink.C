@@ -622,6 +622,10 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     c.adjustMapSize(map, sig_Undef);
     for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = tmp_circ.mkInp();
 
+    // Increase fanouts for all root signals:
+    for (int i = 0; i < b.outs.size(); i++)
+        c.bumpFanout(gate(b.outs[i]));
+
     // Shrink circuit with roots in 'b.outs':
     for (int i = 0; i < b.outs.size(); i++)
         if (only_copy) copyGate (c, tmp_circ, gate(b.outs[i]), map);
