@@ -261,11 +261,15 @@ static inline Sig _copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_
 static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map)
 {
     if (copy_map[g] == sig_Undef)
-        if (type(g) == gtype_Inp)
+        if (g == gate_True)
+            copy_map[g] = sig_True;
+        else if (type(g) == gtype_Inp)
             copy_map[g] = dst.mkInp();
-        else 
+        else{
+            assert(type(g) == gtype_And);
             copy_map[g] = dst.mkAnd(_copySig(src, dst, src.lchild(g), copy_map), 
                                     _copySig(src, dst, src.rchild(g), copy_map));
+        }
 
     return copy_map[g];
 }
