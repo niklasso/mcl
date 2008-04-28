@@ -299,7 +299,7 @@ static inline bool implies(const vec<vec<Sig> >& cnf, const vec<Sig>& clause)
     return tmp.size() == 1 && tmp[0].size() == 0;
 }
 
-#if 0
+#if 1
 // What were this intended for?
 static inline bool resolve(const vec<Sig>& xs, const vec<Sig>& ys, vec<Sig>& zs)
 {
@@ -409,7 +409,7 @@ void Minisat::normalizeTwoLevel(vec<vec<Sig> >& xss, const vec<vec<Sig> >& conte
 
     // Remove remaining clauses that are implied by the others:
     //
-#if 0
+#if 1
 
     if (xss.size() > 1 && xss.size() < 17)
         removeRedundant(xss);
