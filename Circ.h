@@ -1,5 +1,5 @@
 /******************************************************************************************[Circ.h]
-Copyright (c) 2007, Niklas Sorensson
+Copyright (c) 2007-2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -167,6 +167,7 @@ struct Box {
     }
 };
 
+// NOTE: trying to remove this "feature".
 // INVARIANT: flops are added last to both 'inps' (the coombinational variables representing the
 //            flops), and to 'outs' (the signals to be delayed by the flops). Given a set of flops
 //            'flp' of type Flops and a Box 'b', it is possible to iterate over only the *real*
@@ -235,7 +236,7 @@ Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 
-void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
+void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
 
 //=================================================================================================

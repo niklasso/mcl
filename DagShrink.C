@@ -624,15 +624,21 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     // Copy inputs (including flop gates):
     c.adjustMapSize(map, sig_Undef);
     for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = tmp_circ.mkInp();
+    for (int i = 0; i < flp   .size(); i++) map[flp   [i]] = tmp_circ.mkInp();
 
-    // Increase fanouts for all root signals:
-    for (int i = 0; i < b.outs.size(); i++)
-        c.bumpFanout(gate(b.outs[i]));
+    // Build set of all sink-nodes:
+    vec<Gate> sinks;
+    for (int i = 0; i < b.outs.size(); i++) sinks.push(gate(b.outs[i]));
+    for (int i = 0; i < flp   .size(); i++) sinks.push(gate(flp.def(flp[i])));
+
+    // Increase fanouts for all sinks:
+    for (int i = 0; i < sinks.size(); i++)
+        c.bumpFanout(sinks[i]);
 
     // Shrink circuit with roots in 'b.outs':
-    for (int i = 0; i < b.outs.size(); i++)
-        if (only_copy) copyGate (c, tmp_circ, gate(b.outs[i]), map);
-        else           dagShrink(c, tmp_circ, gate(b.outs[i]), map, rnd_seed);
+    for (int i = 0; i < sinks.size(); i++)
+        if (only_copy) copyGate (c, tmp_circ, sinks[i], map);
+        else           dagShrink(c, tmp_circ, sinks[i], map, rnd_seed);
 
     if (!only_copy){
         dash_stats.current().total_nodes_before = c.nGates();
@@ -693,39 +699,42 @@ void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, double frac)
 // Utility functions:
 //
 
+// NOTE: this appears to be buggy ...
 static inline void splitDisj(Circ& c, Sig x, SSet& all_outputs)
 {
-    if (type(x) != gtype_And || !sign(x)){
-        all_outputs.insert(x);
-        return; }
+    // if (sign(x) && type(x) == gtype_And){
+    if (false){
+        // printf(" >>> got here ... \n");
 
-    printf(" >>> got here ... \n");
+        // Handle disjunction:
+        //
+        Sig l = c.lchild(x);
+        Sig r = c.rchild(x);
 
-    // Handle disjunction:
-    //
-    Sig l = c.lchild(x);
-    Sig r = c.rchild(x);
-
-    if (!sign(r)){ Sig tmp = l; l = r; r = tmp; }
+        if (!sign(r) || type(r) != gtype_And){ Sig tmp = l; l = r; r = tmp; }
     
-    if (!sign(r))
-        all_outputs.insert(x);
-    else{
-        vec<Sig> xs;
-        if (sign(l)){
-            int size_l = (c.matchAnds(gate(l), xs, true), xs.size());
-            int size_r = (c.matchAnds(gate(r), xs, true), xs.size());
-            
-            if (size_l > size_r){ Sig tmp = l; l = r; r = tmp; }
-        }
+        if (!sign(r) || type(r) != gtype_And)
+            all_outputs.insert(x);
+        else{
+            vec<Sig> xs;
+            if (sign(l) && type(l) == gtype_And){
+                int size_l = (c.matchAnds(gate(l), xs, true), xs.size());
+                int size_r = (c.matchAnds(gate(r), xs, true), xs.size());
+                
+                if (size_l > size_r){ Sig tmp = l; l = r; r = tmp; }
+            }
         
-        // x is signed, r is signed (i.e x == ~l or ~r):
-        c.matchAnds(gate(r), xs, true);
+            // x is signed, r is signed (i.e x == ~l or ~r):
+            assert(sign(r));
+            assert(type(r) == gtype_And);
+            c.matchAnds(gate(r), xs, true);
 
-        printf(" >>> DISTRIBUTED DISJ. OVER CONJ. OF SIZE %d\n", xs.size());
-        for (int j = 0; j < xs.size(); j++)
-            all_outputs.insert(c.mkOr(~l, xs[j]));
-    }
+            // printf(" >>> DISTRIBUTED DISJ. OVER CONJ. OF SIZE %d\n", xs.size());
+            for (int j = 0; j < xs.size(); j++)
+                all_outputs.insert(c.mkOr(~l, xs[j]));
+        }
+    }else
+        all_outputs.insert(x);
 }
 
 // Breaking down big output conjunctions, and merging equivalent output nodes:
@@ -738,7 +747,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         bool again = false;
         all_outputs.clear();
 
-        for (int i = 0; i < b.outs.size() - flp.size(); i++){
+        for (int i = 0; i < b.outs.size(); i++){
             Sig x = b.outs[i];
             
             if (type(x) == gtype_And){
@@ -747,24 +756,24 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
                     //
                     c.matchAnds(gate(x), xs, true);
 
-                    printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
+                    // printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                     
                     for (int j = 0; j < xs.size(); j++){
                         if (!sign(xs[j]) && type(xs[j]) == gtype_And)
                             again = true;
 
-                        printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
-                    
+                        // printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
+                        
                         // all_outputs.insert(xs[j]);
                         splitDisj(c, xs[j], all_outputs);
                     }
                 
-                    printf(" >>> GATES = ");
-                    for (int j = 0; j < xs.size(); j++){
-                        all_outputs.insert(xs[j]);
-                        printf("%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
-                    }
-                    printf("\n");
+                    // printf(" >>> GATES = ");
+                    // for (int j = 0; j < xs.size(); j++){
+                    //     all_outputs.insert(xs[j]);
+                    //     printf("%s%s%d ", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])));
+                    // }
+                    // printf("\n");
                 }else{
                     splitDisj(c, x, all_outputs);
                 }
@@ -775,9 +784,6 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         b.outs.clear();
         for (int i = 0; i < all_outputs.size(); i++)
             b.outs.push(all_outputs[i]);
-        for (int i = 0; i < flp.size(); i++)
-            b.outs.push(flp.def(flp[i]));
-
         // break;
 
         if (!again) 
