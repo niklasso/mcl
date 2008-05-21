@@ -199,7 +199,7 @@ class Clausifyer
     Lit  clausifyAs    (Gate g, Lit a){ return clausifyAs(mkSig(g), a); }
     Lit  clausifyAs    (Sig  x, Lit a){
         // this is a naive implementation;
-        // TODO: a real implementation avoids the creation of an extra literal
+        // FIXME: a real implementation avoids the creation of an extra literal
         Lit b = clausify(x);
         solver.addClause(~a,b);
         solver.addClause(a,~b);
