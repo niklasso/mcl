@@ -219,6 +219,16 @@ class Clausifyer
             return mkLit(vmap[gate(s)], sign(s));
     }
 
+    lbool getModelValue(Gate g){
+        Lit x = lookup(g);
+        return x == lit_Undef ? l_Undef
+             : solver.getModelValue(x);
+    }
+
+    lbool getModelValue(Sig s){
+        return getModelValue(gate(s)) ^ sign(s);
+    }
+
     void prepare       () {
         circ.adjustMapSize(vmap, var_Undef);
     }
