@@ -193,7 +193,7 @@ class Clausifyer
         , nof_muxs(0)
         {}
 
-    Var  clausify      (Gate g){ clausifyIter(g); return vmap[g]; }
+    Var  clausify      (Gate g){ circ.adjustMapSize(vmap, var_Undef); clausifyIter(g); return vmap[g]; }
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
 
     Lit  clausifyAs    (Gate g, Lit a){ return clausifyAs(mkSig(g), a); }
@@ -227,10 +227,6 @@ class Clausifyer
 
     lbool getModelValue(Sig s){
         return getModelValue(gate(s)) ^ sign(s);
-    }
-
-    void prepare       () {
-        circ.adjustMapSize(vmap, var_Undef);
     }
 
     void assume(Sig x){
