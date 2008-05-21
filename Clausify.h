@@ -196,6 +196,16 @@ class Clausifyer
     Var  clausify      (Gate g){ clausifyIter(g); return vmap[g]; }
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
 
+    Lit  clausifyAs    (Gate g, Lit a){ return clausifyAs(mkSig(g), a); }
+    Lit  clausifyAs    (Sig  x, Lit a){
+        // this is a naive implementation;
+        // TODO: a real implementation avoids the creation of an extra literal
+        Lit b = clausify(x);
+        solver.addClause(~a,b);
+        solver.addClause(a,~b);
+        return a;
+    }
+
     Var lookup(Gate g){
         vmap.growTo(g, var_Undef);
         return vmap[g];
