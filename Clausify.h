@@ -219,14 +219,14 @@ class Clausifyer
             return mkLit(vmap[gate(s)], sign(s));
     }
 
-    lbool getModelValue(Gate g){
-        Lit x = lookup(g);
-        return x == lit_Undef ? l_Undef
-             : solver.getModelValue(x);
+    lbool modelValue(Gate g){
+        Var x = lookup(g);
+        return x == var_Undef ? l_Undef
+             : solver.modelValue(x);
     }
 
-    lbool getModelValue(Sig s){
-        return getModelValue(gate(s)) ^ sign(s);
+    lbool modelValue(Sig s){
+        return modelValue(gate(s)) ^ sign(s);
     }
 
     void assume(Sig x){
