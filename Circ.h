@@ -107,6 +107,11 @@ class Circ
     void adjustMapSize(GMap<T>& map) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp)); }
 
     template<class T>
+    void adjustMapSize(SGMap<T>& map, const T& def) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
+    template<class T>
+    void adjustMapSize(SGMap<T>& map) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true)); }
+
+    template<class T>
     void adjustMapSize(SMap<T>& map, const T& def) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
     template<class T>
     void adjustMapSize(SMap<T>& map) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true)); }

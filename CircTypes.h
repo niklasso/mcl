@@ -22,6 +22,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/Vec.h"
 
+#include <stdint.h>
+
 namespace Minisat {
 
 //=================================================================================================
@@ -139,6 +141,56 @@ class SMap : private vec<T>
 
     void     moveTo (SMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
     void     copyTo (SMap<T>& to) { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+};
+
+
+//-------------------------------------------------------------------------------------------------
+// Helper-class for SGMap:
+// FIXME: this is quite general, move somewhere else?
+
+template<class T>
+struct SignedRef {
+    T* ref;
+
+    SignedRef(T* r, bool s) : ref((T*) ((uintptr_t)r | (int)s)) {}
+
+    // Assignment operator:
+    void operator=(const T& value){ 
+        T* r = (T*)((uintptr_t)ref & ~1);
+        *r = value ^ ((uintptr_t)ref & 1); }
+
+    // Automatic type-conversion operator:
+    operator T (void){ 
+        T* r = (T*)((uintptr_t)ref & ~1);
+        return *r ^ ((uintptr_t)ref & 1); }
+
+    // Helps resolving overloading:
+    bool operator==(const T& other){ return other == *this; }
+    bool operator!=(const T& other){ return other != *this; }
+};
+
+
+template<class T>
+class SGMap : private vec<T>
+{
+ public:
+    // Vector interface:
+    SignedRef<T> operator [](Sig x){ 
+        T*           ref  = &((vec<T>&)(*this))[index(gate(x))];
+        SignedRef<T> sref(ref, sign(x));
+        return sref; }
+
+
+    // Note the slightly different semantics to vec's capacity, namely that
+    // this guarantees that the element 'g' can be indexed after this operation.
+    void     growTo (Sig x)             { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1   ); }
+    void     growTo (Sig x, const T& e) { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1, e); }
+
+    void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
+    int      size   () const             { return ((vec<T>&)(*this)).size(); }
+
+    void     moveTo (SGMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
+    void     copyTo (SGMap<T>& to) { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
