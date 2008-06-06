@@ -623,6 +623,7 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
 
     // Copy inputs (including flop gates):
     c.adjustMapSize(map, sig_Undef);
+    map[gate_True] = sig_True;
     for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = tmp_circ.mkInp();
     for (int i = 0; i < flp   .size(); i++) map[flp   [i]] = tmp_circ.mkInp();
 
