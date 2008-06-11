@@ -169,7 +169,7 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
     assert(g != gate_Undef);
     assert(g != gate_True);
 
-    c.adjustMapSize(tmp_fanouts, 0);
+    tmp_fanouts.growTo(c.lastGate(), 0);
     tmp_set.clear();
     tmp_set.insert(g);
     tmp_stack.clear();

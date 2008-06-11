@@ -180,7 +180,7 @@ void Minisat::writeAiger(const char* filename, const Circ& c, const Box& b, cons
     bottomUpOrder(c, sinks, uporder);
 
     unsigned int       n_gates = uporder.size() - n_inputs - n_flops;
-    GMap<unsigned int> gate2id; c.adjustMapSize(gate2id);
+    GMap<unsigned int> gate2id; gate2id.growTo(c.lastGate());
     for (int i = 0; i < uporder.size(); i++)
         gate2id[uporder[i]] = i + 1;
 

@@ -193,7 +193,10 @@ class Flops {
 
  public:
     void clear()               { gates.clear(); defs.clear(); is_def.clear(); }
-    void adjust(const Circ& c) { c.adjustMapSize(defs, sig_Undef); c.adjustMapSize(is_def, (char)0); }
+    void adjust(const Circ& c) { 
+        defs  .growTo(c.lastGate(), sig_Undef);
+        is_def.growTo(mkSig(c.lastGate()), 0);
+    }
 
     void defineFlop(Gate f, Sig def){
         gates.push(f);

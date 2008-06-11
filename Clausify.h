@@ -173,8 +173,8 @@ class Clausifyer
         {}
 
     Lit  clausify      (Gate g){ 
-        circ.adjustMapSize(vmap, lit_Undef); 
-        circ.adjustMapSize(clausify_mark, (char)mark_undef);
+        vmap         .growTo(circ.lastGate(), lit_Undef);
+        clausify_mark.growTo(circ.lastGate(), mark_undef);
         clausifyIter(g); 
         return vmap[g]; }
 
@@ -428,7 +428,7 @@ class SimpClausifyer
     }
 
     void prepare(){
-        circ.adjustMapSize(vmap, var_Undef);
+        vmap.growTo(circ.lastGate(), var_Undef);
     }
 
     void assume(Sig x){

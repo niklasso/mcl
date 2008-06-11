@@ -147,7 +147,8 @@ static inline bool tryReTime(const Circ& from, const Flops& from_flp, Circ& to, 
 static inline void mergeEqualFlops(Circ& c, Box& b, Flops& flp)
 {
     Circ      to;
-    GMap<Sig> map; c.adjustMapSize(map, sig_Undef);
+    GMap<Sig> map; 
+    map.growTo(c.lastGate(), sig_Undef);
 
     // Copy inputs (including flop gates):
     for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = to.mkInp();
@@ -205,7 +206,8 @@ void Minisat::fwdReTime(Circ& c, Box& b, Flops& flp)
     for (int iter = 0; shrunk && iter < max_iters; iter++){
         Circ      to;
         Flops     new_flops;
-        GMap<Sig> map; c.adjustMapSize(map, sig_Undef);
+        GMap<Sig> map; 
+        map.growTo(c.lastGate(), sig_Undef);
 
         // printf("starting iteration\n");
 

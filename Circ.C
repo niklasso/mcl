@@ -276,12 +276,12 @@ static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_
 
 
 Sig  Minisat::copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map) { 
-    src.adjustMapSize(copy_map, sig_Undef); return _copyGate(src, dst, g, copy_map); }
+    copy_map.growTo(src.lastGate(), sig_Undef); return _copyGate(src, dst, g, copy_map); }
 Sig  Minisat::copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_map) {
-    src.adjustMapSize(copy_map, sig_Undef); return _copySig (src, dst, x, copy_map); }
+    copy_map.growTo(src.lastGate(), sig_Undef); return _copySig (src, dst, x, copy_map); }
 void Minisat::copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map)
 {
-    src.adjustMapSize(copy_map, sig_Undef); 
+    copy_map.growTo(src.lastGate(), sig_Undef);
     for (int i = 0; i < xs.size(); i++)
         _copySig(src, dst, xs[i], copy_map);
 }
