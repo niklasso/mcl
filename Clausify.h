@@ -36,10 +36,11 @@ class Clausifyer
     S&         solver;
 
     GMap<Var>  vmap;
+    GMap<char> clausify_mark;
+
+    enum { mark_undef = 0, mark_down = 1, mark_done = 2 };
 
     vec<Lit>   tmp_lits;
-    SSet       tmp_reached;
-    vec<Sig>   tmp_sig_stack;
     vec<Sig>   tmp_big_and;
 
     SSet       top_assumed;
@@ -53,33 +54,45 @@ class Clausifyer
     //
     void clausifyIter(Gate g)
     {
+
         vec<Gate> stack; stack.push(g);
         assert(vmap[g] == vmap[g]);
         while (stack.size() > 0){
             g = stack.last(); 
             assert(g != gate_Undef);
-            if (g == gate_True){
+
+            if (clausify_mark[g] == mark_done){
+                stack.pop();
+                continue; }
+
+            else if (g == gate_True){
                 // Constant gate:
                 //
-                if (vmap[g] == var_Undef){
-                    vmap[g] = solver.newVar();
-                    solver.addClause(mkLit(vmap[g])); }
+                assert(clausify_mark[g] == mark_undef);
+                assert(vmap[g] == var_Undef);
+
+                vmap[g] = solver.newVar();
+                clausify_mark[g] = mark_done;
+                solver.addClause(mkLit(vmap[g]));
                 stack.pop();
 
             }else if (type(g) == gtype_Inp){
                 // Input gate:
                 //
-                if (vmap[g] == var_Undef) 
-                    vmap[g] = solver.newVar();
+                assert(clausify_mark[g] == mark_undef);
+                assert(vmap[g] == var_Undef);
+
+                vmap[g] = solver.newVar();
+                clausify_mark[g] = mark_done;
                 stack.pop();
 
             }else if (type(g) == gtype_And)
                 // And gate:
                 //
-                if (vmap[g] == var_Undef){
+                if (clausify_mark[g] == mark_undef){
                     // Mark gate while traversing "downwards":
                     //
-                    vmap[g] = -2;
+                    clausify_mark[g] = mark_down;
 
                     Sig x, y, z;
                     if (match_muxes && circ.matchMux(g, x, y, z)){
@@ -162,7 +175,12 @@ class Clausifyer
         , nof_muxs(0)
         {}
 
-    Var  clausify      (Gate g){ circ.adjustMapSize(vmap, var_Undef); clausifyIter(g); return vmap[g]; }
+    Var  clausify      (Gate g){ 
+        circ.adjustMapSize(vmap, var_Undef); 
+        circ.adjustMapSize(clausify_mark, mark_undef);
+        clausifyIter(g); 
+        return vmap[g]; }
+
     Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
 
     Lit  clausifyAs    (Gate g, Lit a){ return clausifyAs(mkSig(g), a); }
