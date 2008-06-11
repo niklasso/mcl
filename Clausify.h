@@ -24,35 +24,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "simp/SimpSolver.h"
 #include "circ/Circ.h"
 
-namespace Minisat {;
-
-// FIXME: handle constants !!!
-//=================================================================================================
-// Simple helpers:
-
-template<class S>
-static void add1Clause(Lit x, S& solver, vec<Lit>& tmp) { 
-    // printf(" [%s%d, %s%d]\n", sign(x)?"~":"", var(x), sign(y)?"~":"", var(y));
-    tmp.clear(); tmp.push(x); solver.addClause(tmp); }
-
-template<class S>
-static void add2Clause(Lit x, Lit y, S& solver, vec<Lit>& tmp) { 
-    // printf(" [%s%d, %s%d]\n", sign(x)?"~":"", var(x), sign(y)?"~":"", var(y));
-    tmp.clear(); tmp.push(x); tmp.push(y); solver.addClause(tmp); }
-
-template<class S>
-static void add3Clause(Lit x, Lit y, Lit z, S& solver, vec<Lit>& tmp) { 
-    tmp.clear(); tmp.push(x); tmp.push(y); tmp.push(z); solver.addClause(tmp); }
-
-template<class S>
-static void add4Clause(Lit x, Lit y, Lit z, Lit w, S& solver, vec<Lit>& tmp) {
-    tmp.clear(); tmp.push(x); tmp.push(y); tmp.push(z); tmp.push(w); solver.addClause(tmp); }
-
+namespace Minisat {
 
 //=================================================================================================
 // An almost naive clausifyer for Circuits:
 
-template<class S>
+template<class S, bool match_muxes = true>
 class Clausifyer
 {
     Circ&      circ;
@@ -86,7 +63,7 @@ class Clausifyer
                 //
                 if (vmap[g] == var_Undef){
                     vmap[g] = solver.newVar();
-                    add1Clause(mkLit(vmap[g]), solver, tmp_lits); }
+                    solver.addClause(mkLit(vmap[g])); }
                 stack.pop();
 
             }else if (type(g) == gtype_Inp){
@@ -104,20 +81,16 @@ class Clausifyer
                     //
                     vmap[g] = -2;
 
-#if 1
                     Sig x, y, z;
-                    if (circ.matchMux(g, x, y, z)){
+                    if (match_muxes && circ.matchMux(g, x, y, z)){
                         stack.push(gate(x));
                         stack.push(gate(y));
-
+                        
                         if (y != ~z)
                             nof_muxs++, stack.push(gate(z));
                         else
                             nof_xors++;
-                    }else
-#endif
-                    // 
-                    {
+                    }else{
                         nof_ands++;
                         circ.matchAnds(g, tmp_big_and, false);
                         for (int i = 0; i < tmp_big_and.size(); i++)
@@ -130,9 +103,8 @@ class Clausifyer
                     vmap[g] = solver.newVar();
                     Lit lg = mkLit(vmap[g]);
 
-#if 1
                     Sig x, y, z;
-                    if (circ.matchMux(g, x, y, z)){
+                    if (match_muxes && circ.matchMux(g, x, y, z)){
                         assert(vmap[gate(x)] != var_Undef);
                         assert(vmap[gate(y)] != var_Undef);
                         assert(vmap[gate(z)] != var_Undef);
@@ -145,17 +117,14 @@ class Clausifyer
                         Lit ly = mkLit(vmap[gate(y)], sign(y));
                         Lit lz = mkLit(vmap[gate(z)], sign(z));
 
-
                         // Implication(s) in one direction:
-                        add3Clause(~lg, ~lx,  ly, solver, tmp_lits);
-                        add3Clause(~lg,  lx,  lz, solver, tmp_lits);
+                        solver.addClause(~lg, ~lx,  ly);
+                        solver.addClause(~lg,  lx,  lz);
 
                         // Implication(s) in other direction:
-                        add3Clause( lg, ~lx, ~ly, solver, tmp_lits);
-                        add3Clause( lg,  lx, ~lz, solver, tmp_lits);
-                    }else
-#endif
-                    {
+                        solver.addClause( lg, ~lx, ~ly);
+                        solver.addClause( lg,  lx, ~lz);
+                    }else{
                         circ.matchAnds(g, tmp_big_and, false);
                     
                         for (int i = 0; i < tmp_big_and.size(); i++)
@@ -164,7 +133,7 @@ class Clausifyer
                         // Implication(s) in one direction:
                         for (int i = 0; i < tmp_big_and.size(); i++){
                             Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
-                            add2Clause(~lg, p, solver, tmp_lits); }
+                            solver.addClause(~lg, p); }
                         
                         // Single implication in other direction:
                         tmp_lits.clear();
@@ -234,15 +203,11 @@ class Clausifyer
         vec<Sig> disj;
         vec<Lit> lits;
 
-        if (x == sig_True)
+        if (type(x) == gtype_Const){
+            if (x == sig_False)
+                solver.addEmptyClause();
             return;
-        
-        if (x == sig_False){
-            vec<Lit> emptyClause;
-            solver.addClause(emptyClause);
-        }
-
-        if (sign(x) || type(x) == gtype_Inp)
+        }else if (sign(x) || type(x) == gtype_Inp)
             top.push(x);
         else
             circ.matchAnds(gate(x), top, false);
@@ -256,7 +221,7 @@ class Clausifyer
                 top_assumed.insert(top[i]);
                 
                 if (type(top[i]) == gtype_Inp || !sign(top[i]))
-                    add1Clause(clausify(top[i]), solver, tmp_lits);
+                    solver.addClause(clausify(top[i]));
                 else{
                     circ.matchAnds(gate(top[i]), disj, false);
                     lits.clear();
@@ -309,7 +274,7 @@ class SimpClausifyer
                 if (vmap[g] == var_Undef){
                     vmap[g] = solver.newVar();
                     solver.setFrozen(vmap[g], true);
-                    add1Clause(mkLit(vmap[g]), solver, tmp_lits); }
+                    solver.addClause(mkLit(vmap[g])); }
                 stack.pop();
 
             }else if (type(g) == gtype_Inp){
@@ -370,12 +335,12 @@ class SimpClausifyer
 
 
                         // Implication(s) in one direction:
-                        add3Clause(~lg, ~lx,  ly, solver, tmp_lits);
-                        add3Clause(~lg,  lx,  lz, solver, tmp_lits);
+                        solver.addClause(~lg, ~lx,  ly);
+                        solver.addClause(~lg,  lx,  lz);
 
                         // Implication(s) in other direction:
-                        add3Clause( lg, ~lx, ~ly, solver, tmp_lits);
-                        add3Clause( lg,  lx, ~lz, solver, tmp_lits);
+                        solver.addClause( lg, ~lx, ~ly);
+                        solver.addClause( lg,  lx, ~lz);
                     }else
 #endif
                     {
@@ -389,7 +354,7 @@ class SimpClausifyer
                         // Implication(s) in one direction:
                         for (int i = 0; i < tmp_big_and.size(); i++){
                             Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
-                            add2Clause(~lg, p, solver, tmp_lits); }
+                            solver.addClause(~lg, p); }
                         
                         // Single implication in other direction:
                         tmp_lits.clear();
@@ -464,7 +429,7 @@ class SimpClausifyer
                 top_assumed.insert(top[i]);
                 
                 if (type(top[i]) == gtype_Inp || !sign(top[i]))
-                    add1Clause(clausify(top[i]), solver, tmp_lits);
+                    solver.addClause(clausify(top[i]));
                 else{
 
                     circ.matchAnds(gate(top[i]), disj, false);
@@ -497,7 +462,6 @@ class NaiveClausifyer
     S&         solver;
 
     GMap<Var>  vmap;
-    vec<Lit>   tmp_lits;
 
  public:
     NaiveClausifyer(Circ& c, S& s) : circ(c), solver(s) {}
@@ -527,15 +491,15 @@ class NaiveClausifyer
             vmap[g] = solver.newVar();
             
             if (g == gate_True){
-	        add1Clause(mkLit(vmap[g]), solver, tmp_lits); 
+	        solver.addClause(mkLit(vmap[g]));
 	    }else if (type(g) == gtype_And){
                 Lit zl = mkLit(vmap[g]);
                 Lit xl = clausify(circ.lchild(g));
                 Lit yl = clausify(circ.rchild(g));
 
-                add3Clause(~xl, ~yl, zl, solver, tmp_lits);
-                add2Clause(~zl,  xl,     solver, tmp_lits);
-                add2Clause(~zl,  yl,     solver, tmp_lits);
+                solver.addClause(~xl, ~yl, zl);
+                solver.addClause(~zl,  xl);
+                solver.addClause(~zl,  yl);
                 assert(solver.okay());
             }
         }
