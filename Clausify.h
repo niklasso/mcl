@@ -182,7 +182,9 @@ class Clausifyer
 
     void clausifyAs    (Sig  x, Lit a){ clausifyAs(gate(x), a ^ sign(x)); }
     void clausifyAs    (Gate g, Lit a){
-        // This is a naive implementation:
+        vmap         .growTo(circ.lastGate(), lit_Undef);
+        clausify_mark.growTo(circ.lastGate(), mark_undef);
+
         if (clausify_mark[g] == mark_done){
             Lit b = clausify(g);
             solver.addClause(~a,  b);
