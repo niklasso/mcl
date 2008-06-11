@@ -90,7 +90,7 @@ void Circ::pop()
 {
     assert(gate_lim.size() > 0);
     while ((uint32_t)gates.size() > gate_lim.last()){
-        Gate g = gateFromId(gates.size()-1);
+        Gate g = lastGate();
         if (type(g) == gtype_And){
             strashRemove(mkGate(gates.size()-1, gtype_And));
 

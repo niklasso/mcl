@@ -70,7 +70,7 @@ class Circ
     void         strashRemove(Gate g);
     void         restrashAll ();
 
-    Gate         gateFromId  (unsigned int id) const { return mkGate(id, idType(id)); }
+    Gate         gateFromId  (unsigned int id) const;
 
  public:
     // Mode of operation:
@@ -99,6 +99,7 @@ class Circ
     // Gate iterator:
     Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
     Gate firstGate()       const { return nextGate(gateFromId(0)); }
+    Gate lastGate ()       const { return gateFromId(gates.size()-1); }
 
     // Adjust map size:
     template<class T>
@@ -259,8 +260,8 @@ inline unsigned int Circ::allocId()
 
 
 inline GateType Circ::idType(unsigned int id) const { 
-    return gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
-
+    return id == 0 ? gtype_Const : gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
+inline Gate     Circ::gateFromId(unsigned int id) const { return mkGate(id, idType(id)); }
 
 inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return Minisat::matchMuxParts(*this, g, h, x, y, z); }
 inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return Minisat::matchMux(*this, g, x, y, z); }
