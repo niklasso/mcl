@@ -117,8 +117,8 @@ class GMap : private vec<T>
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
-    void     moveTo (GMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (GMap<T>& to) { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     moveTo (GMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
+    void     copyTo (GMap<T>& to)        { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
@@ -127,20 +127,20 @@ class SMap : private vec<T>
 {
  public:
     // Vector interface:
-    const T& operator [] (Sig x) const { return ((const vec<T>&)(*this))[index(x)]; }
-    T&       operator [] (Sig x)       { return ((vec<T>&)(*this))      [index(x)]; }
+    const T& operator [] (Sig x) const   { return ((const vec<T>&)(*this))[index(x)]; }
+    T&       operator [] (Sig x)         { return ((vec<T>&)(*this))      [index(x)]; }
 
     // Note the slightly different semantics to vec's capacity, namely that
     // this guarantees that the element 'g' can be indexed after this operation.
-    void     growTo (Sig x)             { ((vec<T>&)(*this)).growTo(index(x) + 1   ); }
-    void     growTo (Sig x, const T& e) { ((vec<T>&)(*this)).growTo(index(x) + 1, e); }
+    void     growTo (Sig x)              { ((vec<T>&)(*this)).growTo(index(x) + 1   ); }
+    void     growTo (Sig x, const T& e)  { ((vec<T>&)(*this)).growTo(index(x) + 1, e); }
     void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
 
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
-    void     moveTo (SMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (SMap<T>& to) { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     moveTo (SMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
+    void     copyTo (SMap<T>& to)        { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
@@ -186,11 +186,11 @@ class SGMap : private vec<T>
     void     growTo (Sig x)             { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1   ); }
     void     growTo (Sig x, const T& e) { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1, e); }
 
-    void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
-    int      size   () const             { return ((vec<T>&)(*this)).size(); }
+    void     clear  (bool free = false) { ((vec<T>&)(*this)).clear(free); }
+    int      size   () const            { return ((vec<T>&)(*this)).size(); }
 
-    void     moveTo (SGMap<T>& to) { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (SGMap<T>& to) { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     moveTo (SGMap<T>& to)      { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
+    void     copyTo (SGMap<T>& to)      { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
