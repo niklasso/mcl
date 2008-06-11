@@ -234,6 +234,14 @@ class Clausifyer
         vec<Sig> disj;
         vec<Lit> lits;
 
+        if (x == sig_True)
+            return;
+        
+        if (x == sig_False){
+            vec<Lit> emptyClause;
+            solver.addClause(emptyClause);
+        }
+
         if (sign(x) || type(x) == gtype_Inp)
             top.push(x);
         else
@@ -242,14 +250,14 @@ class Clausifyer
         // if (top.size() > 1)
         //     printf(" >>> Gathered %d top level gates\n", top.size());
 
-        for (int i = 0; i < top.size(); i++)
+        for (int i = 0; i < top.size(); i++){
+            assert(type(top[i]) != gtype_Const);
             if (!top_assumed.has(top[i])){
                 top_assumed.insert(top[i]);
                 
                 if (type(top[i]) == gtype_Inp || !sign(top[i]))
                     add1Clause(clausify(top[i]), solver, tmp_lits);
                 else{
-
                     circ.matchAnds(gate(top[i]), disj, false);
                     lits.clear();
                     for (int j = 0; j < disj.size(); j++)
@@ -257,6 +265,7 @@ class Clausifyer
                     solver.addClause(lits);
                 }
             }
+        }
         // fprintf(stderr, " >> (assume) ANDS = %d, XORS = %d, MUXES = %d\n", nof_ands, nof_xors, nof_muxs);
     }
 };
