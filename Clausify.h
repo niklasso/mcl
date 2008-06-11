@@ -35,7 +35,7 @@ class Clausifyer
     Circ&      circ;
     S&         solver;
 
-    GMap<Var>  vmap;
+    GMap<Lit>  vmap;
     GMap<char> clausify_mark;
 
     enum { mark_undef = 0, mark_down = 1, mark_done = 2 };
@@ -54,9 +54,8 @@ class Clausifyer
     //
     void clausifyIter(Gate g)
     {
-
         vec<Gate> stack; stack.push(g);
-        assert(vmap[g] == vmap[g]);
+
         while (stack.size() > 0){
             g = stack.last(); 
             assert(g != gate_Undef);
@@ -65,24 +64,24 @@ class Clausifyer
                 stack.pop();
                 continue; }
 
-            else if (g == gate_True){
+            if (g == gate_True){
                 // Constant gate:
                 //
                 assert(clausify_mark[g] == mark_undef);
-                assert(vmap[g] == var_Undef);
 
-                vmap[g] = solver.newVar();
+                if (vmap[g] == lit_Undef)
+                    vmap[g] = mkLit(solver.newVar());
                 clausify_mark[g] = mark_done;
-                solver.addClause(mkLit(vmap[g]));
+                solver.addClause(vmap[g]);
                 stack.pop();
 
             }else if (type(g) == gtype_Inp){
                 // Input gate:
                 //
                 assert(clausify_mark[g] == mark_undef);
-                assert(vmap[g] == var_Undef);
 
-                vmap[g] = solver.newVar();
+                if (vmap[g] == lit_Undef)
+                    vmap[g] = mkLit(solver.newVar());
                 clausify_mark[g] = mark_done;
                 stack.pop();
 
@@ -110,25 +109,23 @@ class Clausifyer
                             stack.push(gate(tmp_big_and[i]));
                     }
 
-                }else if (vmap[g] == -2){
+                }else if (clausify_mark[g] == mark_down){
                     // On way up, generate clauses:
                     //
-                    vmap[g] = solver.newVar();
-                    Lit lg = mkLit(vmap[g]);
+                    clausify_mark[g] = mark_done;
+
+                    if (vmap[g] == lit_Undef) vmap[g] = mkLit(solver.newVar());
+                    Lit lg = vmap[g];
 
                     Sig x, y, z;
                     if (match_muxes && circ.matchMux(g, x, y, z)){
-                        assert(vmap[gate(x)] != var_Undef);
-                        assert(vmap[gate(y)] != var_Undef);
-                        assert(vmap[gate(z)] != var_Undef);
+                        assert(vmap[gate(x)] != lit_Undef);
+                        assert(vmap[gate(y)] != lit_Undef);
+                        assert(vmap[gate(z)] != lit_Undef);
 
-                        assert(vmap[gate(x)] >= 0);
-                        assert(vmap[gate(y)] >= 0);
-                        assert(vmap[gate(z)] >= 0);
-
-                        Lit lx = mkLit(vmap[gate(x)], sign(x));
-                        Lit ly = mkLit(vmap[gate(y)], sign(y));
-                        Lit lz = mkLit(vmap[gate(z)], sign(z));
+                        Lit lx = vmap[gate(x)] ^ sign(x);
+                        Lit ly = vmap[gate(y)] ^ sign(y);
+                        Lit lz = vmap[gate(z)] ^ sign(z);
 
                         // Implication(s) in one direction:
                         solver.addClause(~lg, ~lx,  ly);
@@ -145,19 +142,19 @@ class Clausifyer
                         
                         // Implication(s) in one direction:
                         for (int i = 0; i < tmp_big_and.size(); i++){
-                            Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
+                            Lit p = vmap[gate(tmp_big_and[i])] ^ sign(tmp_big_and[i]);
                             solver.addClause(~lg, p); }
                         
                         // Single implication in other direction:
                         tmp_lits.clear();
                         for (int i = 0; i < tmp_big_and.size(); i++){
-                            Lit p = mkLit(vmap[gate(tmp_big_and[i])], sign(tmp_big_and[i]));
+                            Lit p = vmap[gate(tmp_big_and[i])] ^ sign(tmp_big_and[i]);
                             tmp_lits.push(~p); }
                         tmp_lits.push(lg);
                         solver.addClause(tmp_lits);
                     }
 
-                    assert(solver.okay());
+                    // assert(solver.okay());
                     stack.pop();
                 }else
                     stack.pop();
@@ -175,40 +172,43 @@ class Clausifyer
         , nof_muxs(0)
         {}
 
-    Var  clausify      (Gate g){ 
-        circ.adjustMapSize(vmap, var_Undef); 
-        circ.adjustMapSize(clausify_mark, mark_undef);
+    Lit  clausify      (Gate g){ 
+        circ.adjustMapSize(vmap, lit_Undef); 
+        circ.adjustMapSize(clausify_mark, (char)mark_undef);
         clausifyIter(g); 
         return vmap[g]; }
 
-    Lit  clausify      (Sig  x){ return mkLit(clausify(gate(x)), sign(x)); }
+    Lit  clausify      (Sig  x){ return clausify(gate(x)) ^ sign(x); }
 
-    Lit  clausifyAs    (Gate g, Lit a){ return clausifyAs(mkSig(g), a); }
-    Lit  clausifyAs    (Sig  x, Lit a){
-        // this is a naive implementation;
-        // FIXME: a real implementation avoids the creation of an extra literal
-        Lit b = clausify(x);
-        solver.addClause(~a,b);
-        solver.addClause(a,~b);
-        return a;
+    void clausifyAs    (Sig  x, Lit a){ clausifyAs(gate(x), a ^ sign(x)); }
+    void clausifyAs    (Gate g, Lit a){
+        // This is a naive implementation:
+        if (clausify_mark[g] == mark_done){
+            Lit b = clausify(g);
+            solver.addClause(~a,  b);
+            solver.addClause( a, ~b);
+        }else{
+            vmap[g] = a;
+            clausifyIter(g);
+        }
     }
 
-    Var lookup(Gate g){
-        vmap.growTo(g, var_Undef);
+    Lit lookup(Gate g){
+        vmap.growTo(g, lit_Undef);
         return vmap[g];
     }
 
     Lit lookup(Sig s){
-        vmap.growTo(gate(s), var_Undef);
-        if (vmap[gate(s)] == var_Undef)
+        vmap.growTo(gate(s), lit_Undef);
+        if (vmap[gate(s)] == lit_Undef)
             return lit_Undef;
         else    
-            return mkLit(vmap[gate(s)], sign(s));
+            return vmap[gate(s)] ^ sign(s);
     }
 
     lbool modelValue(Gate g){
-        Var x = lookup(g);
-        return x == var_Undef ? l_Undef
+        Lit x = lookup(g);
+        return x == lit_Undef ? l_Undef
              : solver.modelValue(x);
     }
 
