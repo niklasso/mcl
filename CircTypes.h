@@ -114,6 +114,7 @@ class GMap : private vec<T>
     void     growTo (Gate g, const T& e) { ((vec<T>&)(*this)).growTo(index(g) + 1, e); }
     void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
 
+    bool     has    (Gate g)      const  { return index(g) < (uint32_t)size(); }
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
@@ -136,6 +137,7 @@ class SMap : private vec<T>
     void     growTo (Sig x, const T& e)  { ((vec<T>&)(*this)).growTo(index(x) + 1, e); }
     void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
 
+    bool     has    (Sig x)       const  { return index(x) < (uint32_t)size(); }
     void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
@@ -186,6 +188,7 @@ class SGMap : private vec<T>
     void     growTo (Sig x)             { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1   ); }
     void     growTo (Sig x, const T& e) { ((vec<T>&)(*this)).growTo(index(gate(x)) + 1, e); }
 
+    bool     has    (Sig x)       const { return index(gate(x)) < (uint32_t)size(); }
     void     clear  (bool free = false) { ((vec<T>&)(*this)).clear(free); }
     int      size   () const            { return ((vec<T>&)(*this)).size(); }
 
