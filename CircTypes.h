@@ -119,7 +119,7 @@ class GMap : private vec<T>
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
     void     moveTo (GMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (GMap<T>& to)        { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     copyTo (GMap<T>& to) const  { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
@@ -142,7 +142,7 @@ class SMap : private vec<T>
     int      size   () const             { return ((vec<T>&)(*this)).size(); }
 
     void     moveTo (SMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (SMap<T>& to)        { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     copyTo (SMap<T>& to) const  { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
@@ -193,7 +193,7 @@ class SGMap : private vec<T>
     int      size   () const            { return ((vec<T>&)(*this)).size(); }
 
     void     moveTo (SGMap<T>& to)      { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (SGMap<T>& to)      { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     copyTo (SGMap<T>& to) const{ ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
 
 
