@@ -199,21 +199,26 @@ class Flops {
     }
 
     void defineFlop(Gate f, Sig def){
+        defs.growTo(f);
+        is_def.growTo(def);
+
         gates.push(f);
         defs  [f]   = def;
         is_def[def] = 1; }
 
-    bool isDef     (Sig x) const { return is_def[x]; }
-    bool isFlop    (Gate f)const { return defs[f] != sig_Undef; }
+    bool isDef     (Sig x) const { return is_def.has(x) && is_def[x]; }
+    bool isFlop    (Gate f)const { return defs.has(f) && defs[f] != sig_Undef; }
     Sig  def       (Gate f)const { return defs[f]; }
     int  size      ()      const { return gates.size(); }
     Gate operator[](int i) const { return gates[i]; }
 
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
-    void copyTo(Flops& to){ gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
-    void remap (const Circ& c, const GMap<Sig>& map, Flops& to){
+    void copyTo(Flops& to) const { gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
+    void remap (const Circ& c, const GMap<Sig>& map, Flops& to) const {
+        remap(map, to); }
+
+    void remap (const GMap<Sig>& map, Flops& to) const {
         to.clear();
-        to.adjust(c);
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
             Sig  def = defs[f];
@@ -248,6 +253,26 @@ void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
 
 void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
+ static inline
+ void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
+ static inline
+ void remap   (const GMap<Sig>& map, Flops& flps){ 
+     Flops tmp;
+     flps.remap(map, tmp);
+     tmp.moveTo(flps);
+ }
+
+ static inline
+ void remap   (const GMap<Sig>& map, Gate& g) { g = gate(map[g]); } // Use with care!
+ static inline
+ void remap   (const GMap<Sig>& map, Sig&  x) { x = map[gate(x)] ^ sign(x); }
+
+ template<class T>
+ static inline
+ void remap   (const GMap<Sig>& map, vec<T>& xs){
+     for (int i = 0; i < xs.size(); i++)
+         remap(map, xs[i]);
+ }
 
 //=================================================================================================
 // Implementation of inline methods:
