@@ -244,6 +244,7 @@ void bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& lat
 Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
+void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
 
 void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 

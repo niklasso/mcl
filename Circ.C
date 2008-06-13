@@ -285,3 +285,28 @@ void Minisat::copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>
     for (int i = 0; i < xs.size(); i++)
         _copySig(src, dst, xs[i], copy_map);
 }
+
+
+//=================================================================================================
+// Copy everuthing from one circuit to another:
+//
+
+
+void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
+{
+    map[gate_True] = sig_True;
+    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
+        if (map[g] == sig_Undef)
+            if (type(g) == gtype_Inp)
+                map[g] = dst.mkInp();
+            else {
+                assert(type(g) == gtype_And);
+                
+                Sig ix = src.lchild(g);
+                Sig iy = src.rchild(g);
+                Sig ux = map[gate(ix)] ^ sign(ix);
+                Sig uy = map[gate(iy)] ^ sign(iy);
+
+                map[g] = dst.mkAnd(ux, uy);
+            }
+}
