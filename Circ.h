@@ -143,7 +143,7 @@ class Circ
     void matchTwoLevel
                   (Gate g, vec<vec<Sig> >& xss, bool match_muxes = false);
 
-    // Lookup wether different different patterns already exists somewhere:
+    // Lookup whether different different patterns already exists somewhere:
     Sig tryAnd     (Sig x, Sig y);
     int costAnd    (Sig x, Sig y);
     int costXorOdd (Sig x, Sig y);
@@ -199,15 +199,15 @@ class Flops {
     }
 
     void defineFlop(Gate f, Sig def){
-        defs.growTo(f);
-        is_def.growTo(def);
+        defs  .growTo(f,   sig_Undef);
+        is_def.growTo(def, 0);
 
         gates.push(f);
         defs  [f]   = def;
         is_def[def] = 1; }
 
     bool isDef     (Sig x) const { return is_def.has(x) && is_def[x]; }
-    bool isFlop    (Gate f)const { return defs.has(f) && defs[f] != sig_Undef; }
+    bool isFlop    (Gate f)const { return defs.has(f) && (defs[f] != sig_Undef); }
     Sig  def       (Gate f)const { return defs[f]; }
     int  size      ()      const { return gates.size(); }
     Gate operator[](int i) const { return gates[i]; }
@@ -224,9 +224,8 @@ class Flops {
             Sig  def = defs[f];
             assert(map[f] != sig_Undef);
             assert(map[gate(def)] != sig_Undef);
-            to.defineFlop(gate(map[f]), map[gate(def)] ^ sign(def));
-
             assert(!sign(map[f]));
+            to.defineFlop(gate(map[f]), map[gate(def)] ^ sign(def));
         }
     }
 };
