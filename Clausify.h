@@ -29,21 +29,22 @@ namespace Minisat {
 //=================================================================================================
 // An almost naive clausifyer for Circuits:
 
-template<class S, bool match_muxes = true>
+template<class S, bool match_bigands = true, bool match_muxes = true>
 class Clausifyer
 {
-    Circ&      circ;
-    S&         solver;
+    const Circ& circ;
+    S&          solver;
 
-    GMap<Lit>  vmap;
-    GMap<char> clausify_mark;
+    GMap<Lit>   vmap;
+    GMap<char>  clausify_mark;
 
     enum { mark_undef = 0, mark_down = 1, mark_done = 2 };
 
-    vec<Lit>   tmp_lits;
-    vec<Sig>   tmp_big_and;
+    vec<Lit>    tmp_lits;
+    vec<Sig>    tmp_big_and;
 
-    SSet       top_assumed;
+    SSet        top_assumed;
+    CircMatcher cm;
 
     int nof_ands;
     int nof_xors;
@@ -94,7 +95,7 @@ class Clausifyer
                     clausify_mark[g] = mark_down;
 
                     Sig x, y, z;
-                    if (match_muxes && circ.matchMux(g, x, y, z)){
+                    if (match_muxes && cm.matchMux(circ, g, x, y, z)){
                         stack.push(gate(x));
                         stack.push(gate(y));
                         
@@ -102,11 +103,15 @@ class Clausifyer
                             nof_muxs++, stack.push(gate(z));
                         else
                             nof_xors++;
-                    }else{
+                    }else if (match_bigands){
                         nof_ands++;
-                        circ.matchAnds(g, tmp_big_and, false);
+                        cm.matchAnds(circ, g, tmp_big_and, false);
                         for (int i = 0; i < tmp_big_and.size(); i++)
                             stack.push(gate(tmp_big_and[i]));
+                    }else{
+                        nof_ands++;
+                        stack.push(gate(circ.lchild(g)));
+                        stack.push(gate(circ.rchild(g)));
                     }
 
                 }else if (clausify_mark[g] == mark_down){
@@ -118,7 +123,7 @@ class Clausifyer
                     Lit lg = vmap[g];
 
                     Sig x, y, z;
-                    if (match_muxes && circ.matchMux(g, x, y, z)){
+                    if (match_muxes && cm.matchMux(circ, g, x, y, z)){
                         assert(vmap[gate(x)] != lit_Undef);
                         assert(vmap[gate(y)] != lit_Undef);
                         assert(vmap[gate(z)] != lit_Undef);
@@ -134,8 +139,12 @@ class Clausifyer
                         // Implication(s) in other direction:
                         solver.addClause( lg, ~lx, ~ly);
                         solver.addClause( lg,  lx, ~lz);
-                    }else{
-                        circ.matchAnds(g, tmp_big_and, false);
+
+                        // Extra clauses:
+                        // solver.addClause(~ly, ~lz,  lg);
+                        // solver.addClause( ly,  lz, ~lg);
+                    }else if (match_bigands){
+                        cm.matchAnds(circ, g, tmp_big_and, false);
                     
                         for (int i = 0; i < tmp_big_and.size(); i++)
                             assert(tmp_big_and[i] != sig_True);
@@ -152,6 +161,15 @@ class Clausifyer
                             tmp_lits.push(~p); }
                         tmp_lits.push(lg);
                         solver.addClause(tmp_lits);
+                    }else{
+                        Sig x  = circ.lchild(g);
+                        Sig y  = circ.rchild(g);
+                        Lit lx = vmap[gate(x)] ^ sign(x);
+                        Lit ly = vmap[gate(y)] ^ sign(y);
+
+                        solver.addClause(~lg, lx);
+                        solver.addClause(~lg, ly);
+                        solver.addClause(~lx, ~ly, lg);
                     }
 
                     // assert(solver.okay());
@@ -164,7 +182,7 @@ class Clausifyer
 
 
  public:
-    Clausifyer(Circ& c, S& s) : 
+    Clausifyer(const Circ& c, S& s) : 
           circ(c)
         , solver(s)
         , nof_ands(0)
@@ -230,7 +248,7 @@ class Clausifyer
         }else if (sign(x) || type(x) == gtype_Inp)
             top.push(x);
         else
-            circ.matchAnds(gate(x), top, false);
+            cm.matchAnds(circ, gate(x), top, false);
 
         // if (top.size() > 1)
         //     printf(" >>> Gathered %d top level gates\n", top.size());
@@ -243,7 +261,7 @@ class Clausifyer
                 if (type(top[i]) == gtype_Inp || !sign(top[i]))
                     solver.addClause(clausify(top[i]));
                 else{
-                    circ.matchAnds(gate(top[i]), disj, false);
+                    cm.matchAnds(circ, gate(top[i]), disj, false);
                     lits.clear();
                     for (int j = 0; j < disj.size(); j++)
                         lits.push(clausify(~disj[j]));
