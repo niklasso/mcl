@@ -491,24 +491,24 @@ static Sig rebuildTwoLevel(Circ& in, vec<vec<Sig> >& xss, double& rnd_seed)
 //
 
 static 
-void dagShrink(Circ& in, Circ& out, vec<Sig>& xs, GMap<Sig>& map, double& rnd_seed)
+void dagShrink(const Circ& in, Circ& out, vec<Sig>&xs, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
 {
     randomShuffle(rnd_seed, xs);
     for (int i = 0; i < xs.size(); i++){
-        Sig a = dagShrink(in, out, gate(xs[i]), map, rnd_seed);
+        Sig a = dagShrink(in, out, gate(xs[i]), cm, map, rnd_seed);
         assert(a == map[gate(xs[i])]);
         xs[i] = a ^ sign(xs[i]);
     }
 }
 #ifdef MATCH_TWOLEVEL
 static 
-void dagShrink(Circ& in, Circ& out, vec<vec<Sig> >& xss, GMap<Sig>& map, double& rnd_seed)
+void dagShrink(const Circ& in, Circ& out, vec<vec<Sig> >& xss, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
 {
     randomShuffle(rnd_seed, xss);
     for (int i = 0; i < xss.size(); i++){
         randomShuffle(rnd_seed, xss[i]);
         for (int j = 0; j < xss[i].size(); j++){
-            Sig a = dagShrink(in, out, gate(xss[i][j]), map, rnd_seed);
+            Sig a = dagShrink(in, out, gate(xss[i][j]), cm, map, rnd_seed);
             assert(a == map[gate(xss[i][j])]);
             xss[i][j] = a ^ sign(xss[i][j]);
         }
@@ -517,7 +517,7 @@ void dagShrink(Circ& in, Circ& out, vec<vec<Sig> >& xss, GMap<Sig>& map, double&
 }
 #endif
 
-Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed)
+Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
 {
     // fprintf(stderr, "Copying gate: %d\n", index(g));
 
@@ -528,19 +528,19 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
 
     vec<Sig> xs; 
 #ifdef MATCH_MUXANDXOR
-    if (in.matchXors(g, xs)){
-        ::dagShrink(in, out, xs, map, rnd_seed);
+    if (cm.matchXors(in, g, xs)){
+        ::dagShrink(in, out, xs, cm, map, rnd_seed);
         normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
 
         dash_stats.current().nof_xor_nodes++; dash_stats.current().total_xor_size += xs.size();
         result = rebuildXors(out, xs, rnd_seed);
 
-    }else if (in.matchMux(g, x, y, z)){
+    }else if (cm.matchMux(in, g, x, y, z)){
         // fprintf(stderr, "Matched a Mux\n");
     
-        x = dagShrink(in, out, gate(x), map, rnd_seed) ^ sign(x);
-        y = dagShrink(in, out, gate(y), map, rnd_seed) ^ sign(y);
-        z = dagShrink(in, out, gate(z), map, rnd_seed) ^ sign(z);
+        x = dagShrink(in, out, gate(x), cm, map, rnd_seed) ^ sign(x);
+        y = dagShrink(in, out, gate(y), cm, map, rnd_seed) ^ sign(y);
+        z = dagShrink(in, out, gate(z), cm, map, rnd_seed) ^ sign(z);
         result = rebuildMux(out, x, y, z);
 
         dash_stats.current().nof_mux_nodes++;
@@ -549,9 +549,9 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
     
 #ifndef MATCH_TWOLEVEL
     if (type(g) == gtype_And){
-        in.matchAnds(g, xs);
+        cm.matchAnds(in, g, xs);
 
-        ::dagShrink(in, out, xs, map, rnd_seed);
+        ::dagShrink(in, out, xs, cm, map, rnd_seed);
         // normalizeAnds(xs); // New redundancies may arise after recursive copying/shrinking.
 
         dash_stats.current().nof_and_nodes++; dash_stats.current().total_and_size += xs.size();
@@ -560,9 +560,9 @@ Sig Minisat::dagShrink(Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_
     if (type(g) == gtype_And){
         //if (type(g) == gtype_And){
         vec<vec<Sig> > xss;
-        in.matchTwoLevel(g, xss, false);
+        cm.matchTwoLevel(in, g, xss, false);
 
-        ::dagShrink(in, out, xss, map, rnd_seed);
+        ::dagShrink(in, out, xss, cm, map, rnd_seed);
 
         for (int i = 0; i < xss.size(); i++)
             if (xss[i].size() > 1){
@@ -620,6 +620,7 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     Box       tmp_box;
     Flops     tmp_flops;
     GMap<Sig> map;
+    CircMatcher cm;
 
     // Copy inputs (including flop gates):
     map.growTo(c.lastGate(), sig_Undef);
@@ -639,7 +640,7 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     // Shrink circuit with roots in 'b.outs':
     for (int i = 0; i < sinks.size(); i++)
         if (only_copy) copyGate (c, tmp_circ, sinks[i], map);
-        else           dagShrink(c, tmp_circ, sinks[i], map, rnd_seed);
+        else           dagShrink(c, tmp_circ, sinks[i], cm, map, rnd_seed);
 
     if (!only_copy){
         dash_stats.current().total_nodes_before = c.nGates();
@@ -785,7 +786,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         b.outs.clear();
         for (int i = 0; i < all_outputs.size(); i++)
             b.outs.push(all_outputs[i]);
-        // break;
+        break;
 
         if (!again) 
             break;

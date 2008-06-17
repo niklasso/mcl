@@ -26,7 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 namespace Minisat {
 
 
-Sig  dagShrink       (Circ& in, Circ& out, Gate g, GMap<Sig>& map, double& rnd_seed);
+Sig  dagShrink       (const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed);
 
 void dagShrink       (Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy = false);
 void dagShrinkIter   (Circ& c, Box& b, Flops& flp, int    n_iters = 5);
