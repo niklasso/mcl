@@ -50,8 +50,8 @@ static inline void removeDeadFlops(Circ& c, Box& b, Flops& flp)
             xs.push(gate(flp.def(g)));
     }
 
-    int gates_before = c.nGates();
-    int flops_before = flp.size();
+    // int gates_before = c.nGates();
+    // int flops_before = flp.size();
     int inps_before  = b.inps.size();
     int outs_before  = b.outs.size();
     // Create reduced flop set:
@@ -74,8 +74,8 @@ static inline void removeDeadFlops(Circ& c, Box& b, Flops& flp)
     // Remove now dead logic:
     removeDeadLogic(c, b, flp);
 
-    fprintf(stderr, " >>> REMOVE DEAD FLOPS (before: gates=%d, flops=%d) (after: gates=%d, flops=%d, outs = %d)\n", 
-            gates_before, flops_before, c.nGates(), flp.size(), outs_before);
+    // fprintf(stderr, " >>> REMOVE DEAD FLOPS (before: gates=%d, flops=%d) (after: gates=%d, flops=%d, outs = %d)\n", 
+    //         gates_before, flops_before, c.nGates(), flp.size(), outs_before);
 }
 
 
@@ -159,10 +159,10 @@ static inline void mergeEqualFlops(Circ& c, Box& b, Flops& flp)
         for (int j = 0; j < i; j++)
             if (flp.def(flp[j]) == flp.def(flp[i])){
                 map[flp[i]] = map[flp[j]];
-                printf(" EQUAL FLOPS FOUND (%d = %s%d, %d = %s%d)!\n", 
-                       index(flp[i]), sign(flp.def(flp[i]))?"-":"", index(gate(flp.def(flp[i]))), 
-                       index(flp[j]), sign(flp.def(flp[j]))?"-":"", index(gate(flp.def(flp[j])))
-                       );
+                // printf(" EQUAL FLOPS FOUND (%d = %s%d, %d = %s%d)!\n", 
+                //        index(flp[i]), sign(flp.def(flp[i]))?"-":"", index(gate(flp.def(flp[i]))), 
+                //        index(flp[j]), sign(flp.def(flp[j]))?"-":"", index(gate(flp.def(flp[j])))
+                //        );
                 goto next_flop;
             }
         keep_flops.push(flp[i]);
