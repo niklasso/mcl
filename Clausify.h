@@ -250,8 +250,12 @@ class Clausifyer
         else
             cm.matchAnds(circ, gate(x), top, false);
 
-        // if (top.size() > 1)
-        //     printf(" >>> Gathered %d top level gates\n", top.size());
+        // NOTE: matchAnds can detect an inconsistency returning a single
+        // element list containing sig_False. Handle that:
+        if (top.size() == 1 && top[0] == sig_False){
+            solver.addEmptyClause();
+            return;
+        }
 
         for (int i = 0; i < top.size(); i++){
             assert(type(top[i]) != gtype_Const);
