@@ -190,7 +190,7 @@ void Minisat::writeAiger(const char* filename, const Circ& c, const Box& b, cons
         fprintf(stderr, "ERROR! Could not open file <%s> for writing\n", filename), exit(1);
 
     // fprintf(stderr, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_flops, c.outputs.size(), n_gates);
-    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_flops, b.outs.size() - n_flops, n_gates);
+    fprintf(f, "aig %u %u %u %d %d\n", uporder.size(), n_inputs, n_flops, b.outs.size(), n_gates);
 
     // Write latch-defs:
     for (int i = 0; i < flp.size(); i++)
