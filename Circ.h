@@ -101,22 +101,6 @@ class Circ
     Gate firstGate()       const { return nextGate(gateFromId(0)); }
     Gate lastGate ()       const { return gateFromId(gates.size()-1); }
 
-    // Adjust map size:
-    template<class T>
-    void adjustMapSize(GMap<T>& map, const T& def) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), def); }
-    template<class T>
-    void adjustMapSize(GMap<T>& map) const { map.growTo(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp)); }
-
-    template<class T>
-    void adjustMapSize(SGMap<T>& map, const T& def) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
-    template<class T>
-    void adjustMapSize(SGMap<T>& map) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true)); }
-
-    template<class T>
-    void adjustMapSize(SMap<T>& map, const T& def) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true), def); }
-    template<class T>
-    void adjustMapSize(SMap<T>& map) const { map.growTo(mkSig(mkGate(gates.size()-1, /* does not matter*/ gtype_Inp), true)); }
-
     // Node constructor functions:
     Sig mkInp    ();
     Sig mkAnd    (Sig x, Sig y, bool try_only = false);
@@ -173,16 +157,6 @@ struct Box {
     }
 };
 
-// NOTE: trying to remove this "feature".
-// INVARIANT: flops are added last to both 'inps' (the coombinational variables representing the
-//            flops), and to 'outs' (the signals to be delayed by the flops). Given a set of flops
-//            'flp' of type Flops and a Box 'b', it is possible to iterate over only the *real*
-//            inputs of a circuit by something like the following:
-//
-//            for (int i = 0; i < b.inps.size() - flp.size(); i++)
-//               <do something with real inputs>
-
-
 //=================================================================================================
 // Flops -- a class for representing the sequential behaviour of a circuit:
 
@@ -193,11 +167,6 @@ class Flops {
 
  public:
     void clear()               { gates.clear(); defs.clear(); is_def.clear(); }
-    void adjust(const Circ& c) { 
-        defs  .growTo(c.lastGate(), sig_Undef);
-        is_def.growTo(mkSig(c.lastGate()), 0);
-    }
-
     void defineFlop(Gate f, Sig def){
         defs  .growTo(f,   sig_Undef);
         is_def.growTo(def, 0);

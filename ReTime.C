@@ -56,7 +56,7 @@ static inline void removeDeadFlops(Circ& c, Box& b, Flops& flp)
     int outs_before  = b.outs.size();
     // Create reduced flop set:
     //
-    Flops tmp_flops; tmp_flops.adjust(c);
+    Flops tmp_flops; 
     for (int i = 0; i < flp.size(); i++)
         if (reached_gates.has(flp[i]))
             tmp_flops.defineFlop(flp[i], flp.def(flp[i]));
@@ -137,7 +137,6 @@ static inline bool tryReTime(const Circ& from, const Flops& from_flp, Circ& to, 
     Gate new_flop = gate(to.mkInp());
     map[g]        = mkSig(new_flop, init_val);
 
-    new_flops.adjust(to);
     new_flops.defineFlop(new_flop, next_sig ^ init_val);
 
     return true;
@@ -178,7 +177,7 @@ static inline void mergeEqualFlops(Circ& c, Box& b, Flops& flp)
 
     // Remap inputs, outputs and flops:
     Box   to_box;
-    Flops to_flops; to_flops.adjust(to);
+    Flops to_flops;
     b.remap(map, to_box);
     for (int i = 0; i < keep_flops.size(); i++){
         Gate g = keep_flops[i];
@@ -251,7 +250,6 @@ void Minisat::fwdReTime(Circ& c, Box& b, Flops& flp)
         to_flops.moveTo(flp);
 
         // Attach new flops:
-        flp.adjust(c);
         for (int i = 0; i < new_flops.size(); i++){
             Gate g = new_flops[i];
             Sig  d = new_flops.def(new_flops[i]);

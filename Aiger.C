@@ -130,7 +130,6 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
         b.outs.push(aigToSig(id2sig, aiger_outputs[i]));
 
     // Map flops:
-    flp.adjust(c);
     for (int i = 0; i < aiger_latch_defs.size(); i++){
         Sig x = aigToSig(id2sig, aiger_latch_defs[i]);
         flp.defineFlop(latch_gates[i], x);
