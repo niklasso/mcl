@@ -223,6 +223,14 @@ void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, 
 
  static inline
  void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
+
+//=================================================================================================
+// Map functions:
+//
+// TODO:
+//
+//  - rename from "remap" to "map" ("coremap" -> "comap").
+//
  static inline
  void remap   (const GMap<Sig>& map, Flops& flps){ 
      Flops tmp;
@@ -240,6 +248,32 @@ void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, 
  void remap   (const GMap<Sig>& map, vec<T>& xs){
      for (int i = 0; i < xs.size(); i++)
          remap(map, xs[i]);
+ }
+
+ // Haskellish type: C -> (Sig A -> Sig B) -> (Sig C -> F (Sig A)) -> (Sig C -> F (Sig B))
+ template<class T>
+ static inline
+ void remap   (const Circ& c, const GMap<Sig>& map, GMap<T>& m){
+     for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
+         remap(map, m[g]);
+ }
+
+ // Haskellish type: A -> (Sig A -> Sig B) -> (Sig A -> C) -> (Sig B -> C)
+ template<class T>
+ static inline
+ void coremap(const Circ& c, const GMap<Sig>& map, GMap<T>& m){
+     GMap<T> tmp; m.copyTo(tmp);
+
+     m.clear(); // Changes "type" from (Sig A -> Sig C) to (Sig B -> Sig C)
+
+     for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g)){
+         Sig       from = map[g];
+         const T&  to   = tmp[g];
+
+         m.growTo(gate(from));
+
+         m[gate(from)] = to ^ sign(from);
+     }
  }
 
 //=================================================================================================
