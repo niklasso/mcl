@@ -761,13 +761,13 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
                     // printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                     
                     for (int j = 0; j < xs.size(); j++){
-                        if (!sign(xs[j]) && type(xs[j]) == gtype_And)
-                            again = true;
+                        // if (!sign(xs[j]) && type(xs[j]) == gtype_And)
+                        //     again = true;
 
                         // printf(" >>> hmm: %s%s%d\\%d\n", sign(xs[j])?"-":"", type(xs[j]) == gtype_Inp ? "$":"@", index(gate(xs[j])), c.nFanouts(gate(xs[j])));
                         
-                        // all_outputs.insert(xs[j]);
-                        splitDisj(c, xs[j], all_outputs);
+                        all_outputs.insert(xs[j]);
+                        // splitDisj(c, xs[j], all_outputs);
                     }
                 
                     // printf(" >>> GATES = ");
@@ -777,7 +777,8 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
                     // }
                     // printf("\n");
                 }else{
-                    splitDisj(c, x, all_outputs);
+                    all_outputs.insert(x);
+                    // splitDisj(c, x, all_outputs);
                 }
             }else
                 all_outputs.insert(x);
@@ -786,12 +787,13 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         b.outs.clear();
         for (int i = 0; i < all_outputs.size(); i++)
             b.outs.push(all_outputs[i]);
+
         break;
 
-        if (!again) 
-            break;
-        else
-            printf("AGAIN\n");
+        // if (!again) 
+        //     break;
+        // else
+        //     printf("AGAIN\n");
     }
 
     removeDeadLogic(c, b, flp);
