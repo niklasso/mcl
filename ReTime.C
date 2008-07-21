@@ -146,18 +146,18 @@ static inline bool tryReTime(const Circ& from, const Flops& from_flp, Circ& to, 
 static inline void mergeEqualFlops(Circ& c, Box& b, Flops& flp)
 {
     Circ      to;
-    GMap<Sig> map; 
-    map.growTo(c.lastGate(), sig_Undef);
+    GMap<Sig> m; 
+    m.growTo(c.lastGate(), sig_Undef);
 
     // Copy inputs (including flop gates):
-    for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = to.mkInp();
-    for (int i = 0; i < flp.size(); i++)    map[flp[i]]    = to.mkInp();
+    for (int i = 0; i < b.inps.size(); i++) m[b.inps[i]] = to.mkInp();
+    for (int i = 0; i < flp.size(); i++)    m[flp[i]]    = to.mkInp();
 
     vec<Gate> keep_flops;
     for (int i = 0; i < flp.size(); i++){
         for (int j = 0; j < i; j++)
             if (flp.def(flp[j]) == flp.def(flp[i])){
-                map[flp[i]] = map[flp[j]];
+                m[flp[i]] = m[flp[j]];
                 // printf(" EQUAL FLOPS FOUND (%d = %s%d, %d = %s%d)!\n", 
                 //        index(flp[i]), sign(flp.def(flp[i]))?"-":"", index(gate(flp.def(flp[i]))), 
                 //        index(flp[j]), sign(flp.def(flp[j]))?"-":"", index(gate(flp.def(flp[j])))
@@ -168,26 +168,25 @@ static inline void mergeEqualFlops(Circ& c, Box& b, Flops& flp)
     next_flop:;
     }
 
-    map[gate_True] = sig_True;
+    m[gate_True] = sig_True;
     for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
         if (type(g) == gtype_And)
-            map[g] = to.mkAnd(map[gate(c.lchild(g))] ^ sign(c.lchild(g)),
-                              map[gate(c.rchild(g))] ^ sign(c.rchild(g))
-                              );
+            m[g] = to.mkAnd(m[gate(c.lchild(g))] ^ sign(c.lchild(g)),
+                            m[gate(c.rchild(g))] ^ sign(c.rchild(g))
+                            );
 
     // Remap inputs, outputs and flops:
-    Box   to_box;
+    map(m, b);
     Flops to_flops;
-    b.remap(map, to_box);
     for (int i = 0; i < keep_flops.size(); i++){
         Gate g = keep_flops[i];
         Sig  x = flp.def(g);
-        to_flops.defineFlop(gate(map[g]), map[gate(x)] ^ sign(x));
+        assert(!sign(m[g]));
+        to_flops.defineFlop(gate(m[g]), m[gate(x)] ^ sign(x));
     }
 
     // Move circuit back:
     to      .moveTo(c);
-    to_box  .moveTo(b);
     to_flops.moveTo(flp);
 }
 
@@ -205,49 +204,45 @@ void Minisat::fwdReTime(Circ& c, Box& b, Flops& flp)
     for (int iter = 0; shrunk && iter < max_iters; iter++){
         Circ      to;
         Flops     new_flops;
-        GMap<Sig> map; 
-        map.growTo(c.lastGate(), sig_Undef);
+        GMap<Sig> m; 
+        m.growTo(c.lastGate(), sig_Undef);
 
         // printf("starting iteration\n");
 
         // Copy inputs (including flop gates):
-        for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = to.mkInp();
-        for (int i = 0; i < flp.size(); i++)    map[flp[i]]    = to.mkInp();
+        for (int i = 0; i < b.inps.size(); i++) m[b.inps[i]] = to.mkInp();
+        for (int i = 0; i < flp.size(); i++)    m[flp[i]]    = to.mkInp();
 
         // Increase fanouts for all root signals:
         for (int i = 0; i < b.outs.size(); i++) c.bumpFanout(gate(b.outs[i]));
         for (int i = 0; i < flp.size(); i++)    c.bumpFanout(gate(flp.def(flp[i])));
 
         shrunk = false;
-        map[gate_True] = sig_True;
+        m[gate_True] = sig_True;
         for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
             if (type(g) == gtype_And)
-                if (!retimeable(c, flp, g) && hasInput(c, g, map))
-                    map[g] = to.mkAnd(map[gate(c.lchild(g))] ^ sign(c.lchild(g)),
-                                      map[gate(c.rchild(g))] ^ sign(c.rchild(g))
-                                      );
+                if (!retimeable(c, flp, g) && hasInput(c, g, m))
+                    m[g] = to.mkAnd(m[gate(c.lchild(g))] ^ sign(c.lchild(g)),
+                                    m[gate(c.rchild(g))] ^ sign(c.rchild(g))
+                                    );
 
         for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
             if (type(g) == gtype_And)
-                if (retimeable(c, flp, g) && tryReTime(c, flp, to, new_flops, g, map))
+                if (retimeable(c, flp, g) && tryReTime(c, flp, to, new_flops, g, m))
                     shrunk = true;
                 else{
-                    assert(hasInput(c, g, map));
-                    map[g] = to.mkAnd(map[gate(c.lchild(g))] ^ sign(c.lchild(g)),
-                                      map[gate(c.rchild(g))] ^ sign(c.rchild(g))
-                                      );
+                    assert(hasInput(c, g, m));
+                    m[g] = to.mkAnd(m[gate(c.lchild(g))] ^ sign(c.lchild(g)),
+                                    m[gate(c.rchild(g))] ^ sign(c.rchild(g))
+                                    );
                 }
 
         // Remap inputs, outputs and flops:
-        Box   to_box;
-        Flops to_flops;
-        b  .remap(map,     to_box);
-        flp.remap(to, map, to_flops);
+        map(m, b);
+        map(m, flp);
 
         // Move circuit back:
-        to      .moveTo(c);
-        to_box  .moveTo(b);
-        to_flops.moveTo(flp);
+        to.moveTo(c);
 
         // Attach new flops:
         for (int i = 0; i < new_flops.size(); i++){

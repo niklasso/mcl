@@ -619,14 +619,14 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     Circ      tmp_circ;
     Box       tmp_box;
     Flops     tmp_flops;
-    GMap<Sig> map;
+    GMap<Sig> m;
     CircMatcher cm;
 
     // Copy inputs (including flop gates):
-    map.growTo(c.lastGate(), sig_Undef);
-    map[gate_True] = sig_True;
-    for (int i = 0; i < b.inps.size(); i++) map[b.inps[i]] = tmp_circ.mkInp();
-    for (int i = 0; i < flp   .size(); i++) map[flp   [i]] = tmp_circ.mkInp();
+    m.growTo(c.lastGate(), sig_Undef);
+    m[gate_True] = sig_True;
+    for (int i = 0; i < b.inps.size(); i++) m[b.inps[i]] = tmp_circ.mkInp();
+    for (int i = 0; i < flp   .size(); i++) m[flp   [i]] = tmp_circ.mkInp();
 
     // Build set of all sink-nodes:
     vec<Gate> sinks;
@@ -639,8 +639,8 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
 
     // Shrink circuit with roots in 'b.outs':
     for (int i = 0; i < sinks.size(); i++)
-        if (only_copy) copyGate (c, tmp_circ, sinks[i], map);
-        else           dagShrink(c, tmp_circ, sinks[i], cm, map, rnd_seed);
+        if (only_copy) copyGate (c, tmp_circ, sinks[i], m);
+        else           dagShrink(c, tmp_circ, sinks[i], cm, m, rnd_seed);
 
     if (!only_copy){
         dash_stats.current().total_nodes_before = c.nGates();
@@ -648,13 +648,11 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
     }
 
     // Remap inputs, outputs and flops:
-    b  .remap(map, tmp_box);
-    flp.remap(tmp_circ, map, tmp_flops);
+    map(m, b);
+    map(m, flp);
 
     // Move circuit back:
     tmp_circ .moveTo(c);
-    tmp_box  .moveTo(b);
-    tmp_flops.moveTo(flp);
 }
 
 
