@@ -95,57 +95,58 @@ inline unsigned int index (Sig s) { return s.x >> 1; }
 template<class T>
 class GMap : private vec<T>
 {
+    void boundsCheck(Gate g) const {
+        assert(g != gate_Undef);
+        assert(index(g) < (unsigned)vec<T>::size()); }
+
  public:
     // Vector interface:
-    const T& operator [] (Gate g) const {
-        assert(g != gate_Undef);
-        assert(index(g) < (unsigned)((const vec<T>&)(*this)).size());
-        return ((const vec<T>&)(*this))[index(g)];
-    }
-    T&       operator [] (Gate g)       {
-        assert(g != gate_Undef);
-        assert(index(g) < (unsigned)((const vec<T>&)(*this)).size());
-        return ((vec<T>&)(*this))      [index(g)];
-    }
+    const T& operator [] (Gate g)  const { boundsCheck(g); return vec<T>::operator[](index(g)); }
+    T&       operator [] (Gate g)        { boundsCheck(g); return vec<T>::operator[](index(g)); }
 
     // Note the slightly different semantics to vec's growTo, namely that
     // this guarantees that the element 'g' can be indexed after this operation.
-    void     growTo (Gate g)             { ((vec<T>&)(*this)).growTo(index(g) + 1   ); }
-    void     growTo (Gate g, const T& e) { ((vec<T>&)(*this)).growTo(index(g) + 1, e); }
-    void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
+    void     growTo (Gate g)             { vec<T>::growTo(index(g) + 1   ); }
+    void     growTo (Gate g, const T& e) { vec<T>::growTo(index(g) + 1, e); }
+    void     shrink (int size)           { vec<T>::shrink(size); }
 
-    bool     has    (Gate g)      const  { return index(g) < (uint32_t)size(); }
-    void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
-    int      size   () const             { return ((vec<T>&)(*this)).size(); }
+    bool     has    (Gate g)      const  { return index(g) < (unsigned)vec<T>::size(); }
+    void     clear  (bool free = false)  { vec<T>::clear(free); }
+    int      size   () const             { return vec<T>::size(); }
 
-    void     moveTo (GMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (GMap<T>& to) const  { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     moveTo (GMap<T>& to)        { vec<T>::moveTo((vec<T>&)to); }
+    void     copyTo (GMap<T>& to) const  { vec<T>::copyTo((vec<T>&)to); }
 };
 
 
 template<class T>
 class SMap : private vec<T>
 {
+    void boundsCheck(Gate g) const {
+        assert(g != gate_Undef);
+        assert(index(g) < (unsigned)vec<T>::size()); }
+
  public:
     // Vector interface:
-    const T& operator [] (Sig x) const   { return ((const vec<T>&)(*this))[index(x)]; }
-    T&       operator [] (Sig x)         { return ((vec<T>&)(*this))      [index(x)]; }
+    const T& operator [] (Sig x) const   { return vec<T>::operator[](index(x)); }
+    T&       operator [] (Sig x)         { return vec<T>::operator[](index(x)); }
 
     // Note the slightly different semantics to vec's capacity, namely that
     // this guarantees that the element 'g' can be indexed after this operation.
-    void     growTo (Sig x)              { ((vec<T>&)(*this)).growTo(index(x) + 1   ); }
-    void     growTo (Sig x, const T& e)  { ((vec<T>&)(*this)).growTo(index(x) + 1, e); }
-    void     shrink (int size)           { ((vec<T>&)(*this)).shrink(size); }
+    void     growTo (Sig x)              { vec<T>::growTo(index(x) + 1   ); }
+    void     growTo (Sig x, const T& e)  { vec<T>::growTo(index(x) + 1, e); }
+    void     shrink (int size)           { vec<T>::shrink(size); }
 
-    bool     has    (Sig x)       const  { return index(x) < (uint32_t)size(); }
-    void     clear  (bool free = false)  { ((vec<T>&)(*this)).clear(free); }
-    int      size   () const             { return ((vec<T>&)(*this)).size(); }
+    bool     has    (Sig x)       const  { return index(x) < (unsigned)vec<T>::size(); }
+    void     clear  (bool free = false)  { vec<T>::clear(free); }
+    int      size   () const             { return vec<T>::size(); }
 
-    void     moveTo (SMap<T>& to)        { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
-    void     copyTo (SMap<T>& to) const  { ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
+    void     moveTo (SMap<T>& to)        { vec<T>::moveTo((vec<T>&)to); }
+    void     copyTo (SMap<T>& to) const  { vec<T>::copyTo((vec<T>&)to); }
 };
 
 
+#if 0
 //-------------------------------------------------------------------------------------------------
 // Helper-class for SGMap:
 // FIXME: this is quite general, move somewhere else?
@@ -171,7 +172,6 @@ struct SignedRef {
     bool operator!=(const T& other){ return other != *this; }
 };
 
-
 template<class T>
 class SGMap : private vec<T>
 {
@@ -195,7 +195,7 @@ class SGMap : private vec<T>
     void     moveTo (SGMap<T>& to)      { ((vec<T>&)(*this)).moveTo((vec<T>&)to); }
     void     copyTo (SGMap<T>& to) const{ ((vec<T>&)(*this)).copyTo((vec<T>&)to); }
 };
-
+#endif
 
 //=================================================================================================
 // Ordered set-types:
