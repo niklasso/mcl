@@ -24,6 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "circ/Clausify.h"
 #include "circ/Aiger.h"
 #include "circ/DagShrink.h"
+#include "circ/CombSweep.h"
 
 #include <cstdio>
 #include <cstring>
@@ -122,6 +123,46 @@ int main(int argc, char** argv)
 
         //dagShrinkIter(c, b, flp, (int)dash_iters);
         dagShrinkIter(c, b, flp, 0.005);
+
+#if 1
+        Eqs cand; makeUnitClass(c, cand);
+
+        GSet props;
+        for (int i  = 0; i < b.outs.size(); i++)
+            props.insert(gate(b.outs[i]));
+
+        for (int k = 0; k < cand.size(); k++){
+            int i,j;
+            for (i = j = 0; i < cand[k].size(); i++)
+                if (!props.has(gate(cand[k][i])))
+                    cand[k][j++] = cand[k][i];
+            cand[k].shrink(i - j);
+        }
+
+        Eqs proven;
+        Solver             sweep_s;
+        sweep_s.verbosity = 0;
+        sweep_s.rnd_pol = true;
+        Clausifyer<Solver, false, false> sweep_cl(c, sweep_s);
+        combEqSweep(c, sweep_cl, sweep_s, cand, proven);
+
+        GMap<Sig> subst;
+        makeSubstMap(proven, subst);
+
+        Circ      tmp_circ;
+        GMap<Sig> tmp_m;
+        copyCircWithSubst(c, tmp_circ, subst, tmp_m);
+        map(tmp_m, b);
+        map(tmp_m, flp);
+        tmp_circ.moveTo(c);
+
+        printf("|  Number of inputs:     %12d                                         |\n", c.nInps());
+        printf("|  Number of outputs:    %12d                                         |\n", b.outs.size());
+        printf("|  Number of gates:      %12d                                         |\n", c.nGates());
+
+        dagShrinkIter(c, b, flp, 10);
+
+#endif
 
         // void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
         // {

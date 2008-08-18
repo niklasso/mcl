@@ -349,3 +349,145 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
                 map[g] = dst.mkAnd(ux, uy);
             }
 }
+
+
+void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map)
+{
+    // printf(" >>> COPYING CIRCUIT WITH SUBST: size-before=%d\n", dst.size());
+    subst_map.growTo(src.lastGate(), sig_Undef);
+    copy_map .growTo(src.lastGate(), sig_Undef);
+
+#if 0
+    printf(" >>> SUBST MAP:\n");
+    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
+        if (subst_map[g] != sig_Undef){
+            Sig to = subst_map[g];
+            printf("%c%d -> %s%c%d\n", 
+                   type(g)==gtype_Inp?'$':'@', index(g),
+                   sign(to)?"-":"", type(to)==gtype_Inp?'$':'@', index(gate(to))
+                   );
+        }
+#endif
+
+    copy_map[gate_True] = sig_True;
+    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
+        if (copy_map[g] == sig_Undef)
+            if (type(g) == gtype_Inp)
+                copy_map[g] = dst.mkInp();
+            else {
+                assert(type(g) == gtype_And);
+                
+                Sig orig_x  = src.lchild(g);
+                Sig orig_y  = src.rchild(g);
+                Sig subst_x = subst_map[gate(orig_x)] == sig_Undef ? orig_x : subst_map[gate(orig_x)] ^ sign(orig_x);
+                Sig subst_y = subst_map[gate(orig_y)] == sig_Undef ? orig_y : subst_map[gate(orig_y)] ^ sign(orig_y);
+                Sig copy_x  = copy_map[gate(subst_x)] ^ sign(subst_x);
+                Sig copy_y  = copy_map[gate(subst_y)] ^ sign(subst_y);
+
+#if 0
+                printf(" >>> COPYING GATE %d:\n", index(g));
+                printf(" --- orig : %s%c%d, %s%c%d\n", 
+                       sign(orig_x)?"-":"", type(orig_x)==gtype_Inp?'$':'@', index(gate(orig_x)), 
+                       sign(orig_y)?"-":"", type(orig_y)==gtype_Inp?'$':'@', index(gate(orig_y))
+                       );
+                printf(" --- subst: %s%c%d, %s%c%d\n", 
+                       sign(subst_x)?"-":"", type(subst_x)==gtype_Inp?'$':'@', index(gate(subst_x)), 
+                       sign(subst_y)?"-":"", type(subst_y)==gtype_Inp?'$':'@', index(gate(subst_y))
+                       );
+                printf(" --- copy : %s%c%d, %s%c%d\n", 
+                       sign(copy_x)?"-":"", type(copy_x)==gtype_Inp?'$':'@', index(gate(copy_x)), 
+                       sign(copy_y)?"-":"", type(copy_y)==gtype_Inp?'$':'@', index(gate(copy_y))
+                       );
+#endif
+                copy_map[g] = dst.mkAnd(copy_x, copy_y);
+            }
+    // printf(" >>> COPYING CIRCUIT WITH SUBST: size-after=%d\n", dst.size());
+
+#if 0
+    printf(" >>> COPY MAP:\n");
+    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
+        if (copy_map[g] != sig_Undef){
+            Sig to = copy_map[g];
+            printf("%c%d -> %s%c%d\n", 
+                   type(g)==gtype_Inp?'$':'@', index(g),
+                   sign(to)?"-":"", type(to)==gtype_Inp?'$':'@', index(gate(to))
+                   );
+        }
+#endif
+}
+
+//=================================================================================================
+// Utilities for managing equivalences:
+//
+
+
+void Minisat::normalizeEqs(Eqs& eqs)
+{
+    for (int k = 0; k < eqs.size(); k++){
+        vec<Sig>& cls = eqs[k];
+
+        sort(cls);
+        int i,j;
+        for (i = j = 1; i < cls.size(); i++)
+            if (cls[i] != cls[i-1])
+                cls[j++] = cls[i];
+        cls.shrink(i - j);
+    }
+}
+
+
+void Minisat::removeTrivialEqs(Eqs& eqs)
+{
+    int i, j;
+
+    for (i = j = 0; i < eqs.size(); i++)
+        if (eqs[i].size() > 1){
+            if (i != j) eqs[i].moveTo(eqs[j]);
+            j++;
+        }
+    eqs.shrink(i - j);
+}
+
+
+void Minisat::makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m)
+{
+    // Initialize to identity substitution:
+    m.clear();
+    m.growTo(c.lastGate(), sig_Undef);
+    m[gate_True] = sig_True;
+    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
+        m[g] = mkSig(g);
+
+    // printf(" ::: MAKE SUBST MAP:\n");
+
+    // Restrict with given equivalence:
+    for (int i = 0; i < eqs.size(); i++){
+        // All classes must have some element:
+        assert(eqs[i].size() > 0);
+
+        // Find minimum element:
+        //
+        Sig min = eqs[i][0];
+        for (int j = 1; j < eqs[i].size(); j++)
+            if (eqs[i][j] < min)
+                min = eqs[i][j];
+
+        // printf("CLASS %d: min=%s%c%d\n", i,
+        //        sign(min)?"-":"", type(min)==gtype_Inp?'$':'@', index(gate(min))
+        //        );
+
+        // Bind all non-minimal elements of the class to the minimal element:
+        //
+        for (int j = 0; j < eqs[i].size(); j++)
+            if (eqs[i][j] != min){
+                // Gate from = gate(eqs[i][j]);
+                // Sig to = min ^ sign(eqs[i][j]);
+                // printf("%c%d -> %s%c%d\n", 
+                //        type(from)==gtype_Inp?'$':'@', index(from),
+                //        sign(to)?"-":"", type(to)==gtype_Inp?'$':'@', index(gate(to))
+                //        );
+
+                m[gate(eqs[i][j])] = min ^ sign(eqs[i][j]);
+            }
+    }
+}

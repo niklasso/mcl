@@ -234,6 +234,14 @@ Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
 void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
 
+// FIXME: Move to CircTypes.
+typedef vec<vec<Sig> > Eqs;
+
+void copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
+void normalizeEqs(Eqs& eqs);
+void removeTrivialEqs(Eqs& eqs);
+void makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m);
+
 void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
  static inline
