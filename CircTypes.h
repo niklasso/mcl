@@ -100,6 +100,11 @@ class GMap : private vec<T>
         assert(index(g) < (unsigned)vec<T>::size()); }
 
  public:
+    // FIXME: I think this works for empty vectors (gmaps), but I need to check.
+    typedef T* iterator;
+    iterator begin  (){ return &vec<T>::operator[](0); }
+    iterator end    (){ return &vec<T>::operator[](vec<T>::size()); }
+
     // Vector interface:
     const T& operator [] (Gate g)  const { boundsCheck(g); return vec<T>::operator[](index(g)); }
     T&       operator [] (Gate g)        { boundsCheck(g); return vec<T>::operator[](index(g)); }
@@ -127,6 +132,11 @@ class SMap : private vec<T>
         assert(index(g) < (unsigned)vec<T>::size()); }
 
  public:
+    // FIXME: I think this works for empty vectors (smaps), but I need to check.
+    typedef T* iterator;
+    iterator begin  (){ return &vec<T>::operator[](0); }
+    iterator end    (){ return &vec<T>::operator[](vec<T>::size()); }
+
     // Vector interface:
     const T& operator [] (Sig x) const   { return vec<T>::operator[](index(x)); }
     T&       operator [] (Sig x)         { return vec<T>::operator[](index(x)); }
