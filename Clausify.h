@@ -278,6 +278,7 @@ class Clausifyer
 };
 
 
+#if 0
 class SimpClausifyer
 {
  protected:
@@ -492,6 +493,7 @@ class Clausifyer<SimpSolver> : public SimpClausifyer
     Clausifyer(Circ& c, SimpSolver& s) : SimpClausifyer(c, s) {}
 };
 
+#endif
 
 //=================================================================================================
 // A naive clausifyer for Circuits:
