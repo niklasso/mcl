@@ -178,7 +178,29 @@ class Flops {
 
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
     void copyTo(Flops& to) const { gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
-    void map   (const GMap<Sig>& m, Flops& to) const {
+
+    void map_ (const GMap<Sig>& m, Flops& to) const {
+        to.clear();
+        for (int i = 0; i < gates.size(); i++){
+            Gate f   = gates[i];
+            Sig  def = defs[f];
+            assert(m[gate(def)] != sig_Undef);
+            to.defineFlop(f, m[gate(def)] ^ sign(def));
+        }
+    }
+
+    void comap(const GMap<Sig>& m, Flops& to) const {
+        to.clear();
+        for (int i = 0; i < gates.size(); i++){
+            Gate f   = gates[i];
+            Sig  def = defs[f];
+            assert(m[f] != sig_Undef);
+            assert(!sign(m[f]));
+            to.defineFlop(gate(m[f]), def);
+        }
+    }
+
+    void bimap (const GMap<Sig>& m, Flops& to) const {
         to.clear();
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
@@ -189,6 +211,7 @@ class Flops {
             to.defineFlop(gate(m[f]), m[gate(def)] ^ sign(def));
         }
     }
+
 };
 
 
@@ -219,14 +242,14 @@ void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, 
 //=================================================================================================
 // Map functions:
 //
-// TODO:
-//
-//  - rename from "remap" to "map" ("coremap" -> "comap").
-//
 
-static inline void map(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map(m, tmp); tmp.moveTo(flps); }
-static inline void map(const GMap<Sig>& m, Gate& g)    { if (m[g] != sig_Undef) g = gate(m[g]); } // Use with care!
-static inline void map(const GMap<Sig>& m, Sig&  x)    { if (m[gate(x)] != sig_Undef) x = m[gate(x)] ^ sign(x); }
+
+static inline void map_ (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map_(m, tmp); tmp.moveTo(flps); }
+static inline void comap(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.comap(m, tmp); tmp.moveTo(flps); }
+static inline void map  (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.bimap(m, tmp); tmp.moveTo(flps); }
+
+static inline void map(const GMap<Sig>& m, Gate& g)    { if (g != gate_Undef) g = gate(m[g]); } // Use with care!
+static inline void map(const GMap<Sig>& m, Sig&  x)    { if (x != sig_Undef) x = m[gate(x)] ^ sign(x); }
 static inline void map(const GMap<Sig>& m, Box& b){
     for (int i = 0; i < b.inps.size(); i++){ assert(!sign(m[b.inps[i]])); b.inps[i] = gate(m[b.inps[i]]); }
     for (int i = 0; i < b.outs.size(); i++) b.outs[i] = m[gate(b.outs[i])] ^ sign(b.outs[i]);
@@ -242,10 +265,14 @@ static inline void map(const GMap<Sig>& m, vec<T>& xs){
 // Haskellish type: C -> (Sig A -> Sig B) -> (Sig C -> F (Sig A)) -> (Sig C -> F (Sig B))
 template<class T>
 static inline
-void map(const Circ& c, const GMap<Sig>& m, GMap<T>& tm){
-    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
-        map(m, tm[g]);
+void map(const GMap<Sig>& m, GMap<T>& tm){
+    typename GMap<T>::iterator it;
+    for (it = tm.begin(); it != tm.end(); ++it)
+        map(m, *it);
 }
+
+#if 0
+// FIXME: needs to be thought through.
 
 // Haskellish type: A -> (Sig A -> Sig B) -> (Sig A -> C) -> (Sig B -> C)
 template<class T>
@@ -255,14 +282,18 @@ void comap(const Circ& c, const GMap<Sig>& m, GMap<T>& tm){
 
     tm.clear(); // Changes "type" from (Sig A -> Sig C) to (Sig B -> Sig C)
 
-    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g)){
-        Sig       from = m[g];
-        const T&  to   = tmp[g];
-
-        tm.growTo(gate(from)); // Extends map with default T-constructor.
-        tm[gate(from)] = to ^ sign(from);
-    }
+    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
+        if (m[g] == sig_Undef){
+            
+        }else{
+            Sig       from = m[g];
+            const T&  to   = tmp[g];
+            
+            tm.growTo(gate(from)); // Extends map with default T-constructor.
+            tm[gate(from)] = to ^ sign(from);
+        }
 }
+#endif
 
 //=================================================================================================
 // Implementation of inline methods:
