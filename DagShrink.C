@@ -646,7 +646,7 @@ void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only
         dash_stats.current().total_nodes_before = c.nGates();
         dash_stats.current().total_nodes_after  = tmp_circ.nGates();
     }
-
+    
     // Remap inputs, outputs and flops:
     map(m, b);
     map(m, flp);

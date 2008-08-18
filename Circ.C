@@ -17,6 +17,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include "mtl/Sort.h"
 #include "utils/Options.h"
 #include "circ/Circ.h"
 
@@ -37,11 +38,12 @@ Circ::Circ()
     : n_inps       (0) 
     , n_ands       (0)
     , strash       (NULL)
-    , strash_cap   (0) 
+    , strash_cap   (0)
     , tmp_gate     (gate_True)
     , rewrite_mode (opt_rewrite_mode)
 { 
     gates.growTo(tmp_gate); 
+    n_fanouts.growTo(tmp_gate, 0);
     restrashAll();
     gates[tmp_gate].strash_next = gate_Undef;
 }
@@ -58,6 +60,7 @@ void Circ::clear()
     strash_cap = 0;
     
     gates.growTo(tmp_gate); 
+    n_fanouts.growTo(tmp_gate, 0);
     restrashAll();
     gates[tmp_gate].strash_next = gate_Undef;
 }
@@ -79,6 +82,7 @@ void Circ::moveTo(Circ& to)
     strash_cap = 0;
 
     gates.growTo(tmp_gate); 
+    n_fanouts.growTo(tmp_gate, 0);
     restrashAll();
     gates[tmp_gate].strash_next = gate_Undef;
 }
@@ -321,12 +325,14 @@ void Minisat::copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>
 
 
 //=================================================================================================
-// Copy everuthing from one circuit to another:
+// Copy everything from one circuit to another:
 //
 
 
 void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
 {
+    map.growTo(src.lastGate(), sig_Undef);
+
     map[gate_True] = sig_True;
     for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
         if (map[g] == sig_Undef)
