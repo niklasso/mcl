@@ -124,7 +124,7 @@ int main(int argc, char** argv)
         //dagShrinkIter(c, b, flp, (int)dash_iters);
         dagShrinkIter(c, b, flp, 0.005);
 
-#if 1
+#if 0
         Eqs cand; makeUnitClass(c, cand);
 
         GSet props;
@@ -195,13 +195,16 @@ int main(int argc, char** argv)
 
         }else {
             Clausifyer<SimpSolver> cl(c, S);
-            cl.prepare();
+            //cl.prepare();
 
             for (int i = 0; i < b.outs.size(); i++)
                 cl.assume(b.outs[i]);
 
-            for (int i = 0; i < b.inps.size(); i++)
-                input_vars.push(cl.clausify(b.inps[i]));
+            for (int i = 0; i < b.inps.size(); i++){
+                Lit x = cl.clausify(b.inps[i]);
+                assert(!sign(x));
+                input_vars.push(var(x));
+            }
         }
 
         printf("|  Number of variables:  %12d                                         |\n", S.nVars());
