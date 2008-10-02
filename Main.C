@@ -124,6 +124,10 @@ int main(int argc, char** argv)
         //dagShrinkIter(c, b, flp, (int)dash_iters);
         dagShrinkIter(c, b, flp, 0.005);
 
+        double _time = cpuTime();
+
+        printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+
 #if 0
         Eqs cand; makeUnitClass(c, cand);
 

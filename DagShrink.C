@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 using namespace Minisat;
 
 #define MATCH_MUXANDXOR
-#define MATCH_TWOLEVEL
+//#define MATCH_TWOLEVEL
 
 //=================================================================================================
 // Statistics:
