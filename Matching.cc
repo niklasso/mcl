@@ -1,4 +1,4 @@
-/**************************************************************************************[Matching.C]
+/*************************************************************************************[Matching.cc]
 Copyright (c) 2007, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and

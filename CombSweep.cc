@@ -1,4 +1,4 @@
-/*************************************************************************************[CombSweep.C]
+/************************************************************************************[CombSweep.cc]
 Copyright (c) 2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
