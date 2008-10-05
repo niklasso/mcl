@@ -277,7 +277,7 @@ void Minisat::factorize64(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
-    uint64_t  iroot     = floor(sqrt(number));
+    uint64_t  iroot     = floor(sqrt((double)number));
     int       xs_length = nBits(iroot);
     int       ys_length = nBits(ceil((double)number / iroot));
 
@@ -323,7 +323,7 @@ void Minisat::factorize64squarer(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
-    uint64_t  iroot     = floor(sqrt(number));
+    uint64_t  iroot     = floor(sqrt((double)number));
     int       xs_length = nBits(iroot);
     int       ys_length = nBits(ceil((double)number / iroot));
 
