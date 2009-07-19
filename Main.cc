@@ -143,11 +143,12 @@ int main(int argc, char** argv)
         Solver             sweep_s;
         sweep_s.verbosity = 0;
         sweep_s.rnd_pol = true;
-        Clausifyer<Solver, false, false> sweep_cl(c, sweep_s);
+        //Clausifyer<Solver, false, false> sweep_cl(c, sweep_s);
+        Clausifyer<Solver> sweep_cl(c, sweep_s);
         combEqSweep(c, sweep_cl, sweep_s, cand, proven);
 
         GMap<Sig> subst;
-        makeSubstMap(proven, subst);
+        makeSubstMap(c, proven, subst);
 
         Circ      tmp_circ;
         GMap<Sig> tmp_m;
