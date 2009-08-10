@@ -20,9 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_CircTypes_h
 #define Minisat_CircTypes_h
 
+#include "mtl/IntTypes.h"
 #include "mtl/Vec.h"
-
-#include <stdint.h>
 
 namespace Minisat {
 
