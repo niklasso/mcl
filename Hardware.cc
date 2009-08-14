@@ -299,21 +299,21 @@ void Minisat::factorize64(uint64_t number)
         vec<Lit> tmp; tmp.push(p ^ !value); s.addClause(tmp);
     }
 
-    printf("factorizing: %lld - binary: ", number);
+    printf("factorizing: %"PRIu64" - binary: ", number);
     for (int i = binary_number.size()-1; i >= 0; i--)
         if (binary_number[i])
             printf("1");
         else
             printf("0");
     printf("\n");
-    printf("largest square smaller than target = %llu\n", iroot);
+    printf("largest square smaller than target = %"PRIu64"\n", iroot);
     printf("xs bits = %d\n", xs_length);
     printf("ys bits = %d\n", ys_length);
 
     s.verbosity = 1;
     s.toDimacs("fisk.cnf");
     if (s.solve()){
-        printf("SOLUTION %lld = %lld * %lld\n", number, unbinarizeSolution(xs, cl, s), unbinarizeSolution(ys, cl, s));
+        printf("SOLUTION %"PRIu64" = %"PRIu64" * %"PRIu64"\n", number, unbinarizeSolution(xs, cl, s), unbinarizeSolution(ys, cl, s));
     }else
         printf("NO FACTORS\n");
 }
@@ -345,21 +345,21 @@ void Minisat::factorize64squarer(uint64_t number)
         vec<Lit> tmp; tmp.push(p ^ !value); s.addClause(tmp);
     }
 
-    printf("factorizing: %lld - binary: ", number);
+    printf("factorizing: %"PRIu64" - binary: ", number);
     for (int i = binary_number.size()-1; i >= 0; i--)
         if (binary_number[i])
             printf("1");
         else
             printf("0");
     printf("\n");
-    printf("largest square smaller than target = %llu\n", iroot);
+    printf("largest square smaller than target = %"PRIu64"\n", iroot);
     printf("xs bits = %d\n", xs_length);
     printf("ys bits = %d\n", ys_length);
 
     s.verbosity = 1;
     s.toDimacs("fisk.cnf");
     if (s.solve()){
-        printf("SOLUTION %lld = %lld * %lld\n", number, unbinarizeSolution(xs, cl, s), unbinarizeSolution(ys, cl, s));
+        printf("SOLUTION %"PRIu64" = %"PRIu64" * %"PRIu64"\n", number, unbinarizeSolution(xs, cl, s), unbinarizeSolution(ys, cl, s));
     }else
         printf("NO FACTORS\n");
 }
