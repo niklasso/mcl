@@ -52,8 +52,10 @@ static inline void removeDeadFlops(Circ& c, Box& b, Flops& flp)
 
     // int gates_before = c.nGates();
     // int flops_before = flp.size();
+#ifndef NDEBUG    
     int inps_before  = b.inps.size();
     int outs_before  = b.outs.size();
+#endif
     // Create reduced flop set:
     //
     Flops tmp_flops; 
