@@ -737,6 +737,7 @@ static inline void splitDisj(Circ& c, Sig x, SSet& all_outputs)
         all_outputs.insert(x);
 }
 
+// TODO: this should be re-evaluated/tested and perhaps reimplemented.
 // Breaking down big output conjunctions, and merging equivalent output nodes:
 void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
 {
@@ -744,7 +745,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
     vec<Sig> xs;
 
     for (;;){
-        bool again = false;
+        // bool again = false;
         all_outputs.clear();
 
         for (int i = 0; i < b.outs.size(); i++){
@@ -786,6 +787,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
         for (int i = 0; i < all_outputs.size(); i++)
             b.outs.push(all_outputs[i]);
 
+        // FIXME: I don't remember what caused problems with iterating the whole procedure here.
         break;
 
         // if (!again) 
