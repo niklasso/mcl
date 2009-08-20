@@ -277,9 +277,9 @@ void Minisat::factorize64(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
-    uint64_t  iroot     = floor(sqrt((double)number));
+    uint64_t  iroot     = (uint64_t)floor(sqrt((double)number));
     int       xs_length = nBits(iroot);
-    int       ys_length = nBits(ceil((double)number / iroot));
+    int       ys_length = nBits((uint64_t)ceil((double)number / iroot));
 
     //if (((1ULL << xs_length)-1)*((1ULL << ys_length)-1) < number){
     //    printf("NO FACTORS (trivially)\n");
@@ -323,9 +323,9 @@ void Minisat::factorize64squarer(uint64_t number)
 {
     Circ      c;
     vec<bool> binary_number; binarizeNumber(number, binary_number);
-    uint64_t  iroot     = floor(sqrt((double)number));
+    uint64_t  iroot     = (uint64_t)floor(sqrt((double)number));
     int       xs_length = nBits(iroot);
-    int       ys_length = nBits(ceil((double)number / iroot));
+    int       ys_length = nBits((uint64_t)ceil((double)number / iroot));
 
     //if (((1ULL << xs_length)-1)*((1ULL << ys_length)-1) < number){
     //    printf("NO FACTORS (trivially)\n");
