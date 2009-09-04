@@ -121,8 +121,31 @@ int main(int argc, char** argv)
         double parsed_time = cpuTime();
         printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
-        //dagShrinkIter(c, b, flp, (int)dash_iters);
-        dagShrinkIter(c, b, flp, 0.005);
+        { 
+            // Create a list of all references into the circuit that we need to keep:
+            vec<Sig> sinks; 
+            for (int i = 0; i < b.inps.size(); i++)
+                sinks.push(mkSig(b.inps[i]));
+            for (int i = 0; i < b.outs.size(); i++)
+                sinks.push(b.outs[i]);
+
+            // Set up the DAG-shrink environment:
+            DagShrinker dag(c, sinks);
+            dag.shrinkIter(dash_iters);
+
+            // Map the old reference to point into the shrunk circuit:
+            map(dag.resultMap(), b);
+            map(dag.resultMap(), flp);
+
+            // Copy the shrunk circuit back:
+            dag.copyResult(c);
+
+            // Some sanity checks:
+            for (int i = 0; i < b.inps.size(); i++)
+                assert(b.inps[i] != gate_Undef);
+            for (int i = 0; i < b.outs.size(); i++)
+                assert(b.outs[i] != sig_Undef);
+        }
 
 #if 0
         Eqs cand; makeUnitClass(c, cand);
