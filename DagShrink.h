@@ -25,7 +25,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 namespace Minisat {
 
-
 Sig  dagShrink       (const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& m, double& rnd_seed);
 
 void dagShrink       (Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy = false);
@@ -33,6 +32,42 @@ void dagShrinkIter   (Circ& c, Box& b, Flops& flp, int    n_iters = 5);
 void dagShrinkIter   (Circ& c, Box& b, Flops& flp, double frac);
 void splitOutputs    (Circ& c, Box& b, Flops& flp);
 void removeDeadLogic (Circ& c, Box& b, Flops& flp);
+
+
+class DagShrinker
+{
+ public:
+    DagShrinker(const Circ& src, const vec<Sig>& snk);
+
+    void  shrink(bool only_copy = false);
+    void  shrinkIter(int n_iters);
+    void  shrinkIter(double frac);
+
+    void  printStatsHeader() const;
+    void  printStats()       const;
+    void  printStatsFooter() const;
+
+    Sig   lookup(Gate g); // Source Gate -> Target Gate (not sure if this is needed, or safe)
+    Sig   lookup(Sig  x); // Source Sig  -> Target Sig
+
+    const Circ&      result();
+    const GMap<Sig>& resultMap();
+    void             copyResult(Circ& out);
+
+ private:
+
+    const Circ&      source;
+    const vec<Sig>&  sinks;
+    Circ             target;
+    CircMatcher      cm;
+    GMap<Sig>        m;
+    double           rnd_seed;
+};
+
+
+inline const Circ&      DagShrinker::result()             { return target; }
+inline const GMap<Sig>& DagShrinker::resultMap()          { return m; }
+inline void             DagShrinker::copyResult(Circ& out){ GMap<Sig> dummy; out.clear(); copyCirc(target, out, dummy); }
 
 };
 

@@ -806,3 +806,100 @@ void Minisat::removeDeadLogic(Circ& c, Box& b, Flops& flp)
     double dummy_seed = 123;
     dagShrink(c, b, flp, dummy_seed, true);
 }
+
+//=================================================================================================
+// New DAG-shrink helper class:
+//
+
+DagShrinker::DagShrinker(const Circ& src, const vec<Sig>& snk) : source(src), sinks(snk), rnd_seed(123456789)
+{
+    // Initialize the target to a clone of the source, and the source to target map to the
+    // 'identity map':
+    copyCirc(source, target, m);
+}
+
+
+void DagShrinker::shrink(bool only_copy)
+{
+    Circ      shrunk_circ;
+    GMap<Sig> shrunk_map;
+
+    // Initialize map:
+    shrunk_map.growTo(target.lastGate(), sig_Undef);
+    shrunk_map[gate_True] = sig_True;
+
+    // Increase fanouts for all sinks. This is an ad-hoc way to make sure that we want to keep
+    // these as referable nodes in the resulting circuit:
+    for (int i = 0; i < sinks.size(); i++){
+        Gate source_g = gate(sinks[i]);
+        Gate target_g = gate(m[source_g]);
+        target.bumpFanout(target_g);
+    }
+
+    // Shrink circuit reachable from some sink:
+    for (int i = 0; i < sinks.size(); i++){
+        Gate source_g = gate(sinks[i]);
+        Gate target_g = gate(m[source_g]);
+        if (only_copy) copyGate (target, shrunk_circ, target_g, shrunk_map);
+        else           dagShrink(target, shrunk_circ, target_g, cm, shrunk_map, rnd_seed);
+    }
+
+    if (!only_copy){
+        dash_stats.current().total_nodes_before = target.nGates();
+        dash_stats.current().total_nodes_after  = shrunk_circ.nGates();
+    }
+
+    // Adjust the source -> target map:
+    map(shrunk_map, m);
+
+    // Move circuit back:
+    shrunk_circ.moveTo(target);
+}
+
+
+void  DagShrinker::shrinkIter(int n_iters)
+{
+    printStatsHeader();
+    for (int i = 0; i < n_iters; i++){
+        shrink();
+        printStats();
+    }
+    printStatsFooter();
+}
+
+
+void  DagShrinker::shrinkIter(double frac)
+{
+    printStatsHeader();
+    int size_before, size_after;
+    do {
+        size_before = target.nGates();
+        shrink();
+        size_after  = target.nGates();
+        printStats();
+    } while (frac < ((double)(size_before - size_after) / size_before));
+    printStatsFooter();
+}
+
+
+void  DagShrinker::printStatsHeader() const
+{
+    printf("==========================[ DAG Aware Minimization ]===========================\n");
+    printf("| TOT. GATES |      MATCHED GATES         |          GAIN        | NEW MUXs   |\n");
+    printf("|            | ANDs     XORs     MUXs     | ANDs   XORs   MUXs   |            |\n");
+    printf("===============================================================================\n");
+    dash_stats.clear();
+}
+
+
+void  DagShrinker::printStats()       const
+{
+    dash_stats.print();
+    dash_stats.clear();
+}
+
+
+void  DagShrinker::printStatsFooter() const
+{
+    printf("===============================================================================\n");
+}
