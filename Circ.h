@@ -270,7 +270,21 @@ static inline void map(const GMap<Sig>& m, vec<T>& xs){
         map(m, xs[i]);
 }
 
-// Haskellish type: C -> (Sig A -> Sig B) -> (Sig C -> F (Sig A)) -> (Sig C -> F (Sig B))
+static inline
+void map(const GMap<Sig>& m, GMap<Sig>& tm){
+    GMap<Sig>::iterator it;
+    for (it = tm.begin(); it != tm.end(); ++it)
+        if (m.has(gate(*it)))
+            map(m, *it);
+        else
+            *it = sig_Undef;
+}
+
+#if 0
+// NOTE: this version of map does not work when there is some key in 'tm' that does not exists in
+// 'm'. It would be resonable for the user to provide a default T value, or use T's default
+// constructor, but I'll leave that for later.
+// NOTE: Haskellish type: C -> (Sig A -> Sig B) -> (Sig C -> F (Sig A)) -> (Sig C -> F (Sig B))
 template<class T>
 static inline
 void map(const GMap<Sig>& m, GMap<T>& tm){
@@ -278,6 +292,8 @@ void map(const GMap<Sig>& m, GMap<T>& tm){
     for (it = tm.begin(); it != tm.end(); ++it)
         map(m, *it);
 }
+#endif
+
 
 #if 0
 // FIXME: needs to be thought through.
