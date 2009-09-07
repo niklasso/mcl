@@ -124,10 +124,8 @@ int main(int argc, char** argv)
         { 
             // Create a list of all references into the circuit that we need to keep:
             vec<Sig> sinks; 
-            for (int i = 0; i < b.inps.size(); i++)
-                sinks.push(mkSig(b.inps[i]));
-            for (int i = 0; i < b.outs.size(); i++)
-                sinks.push(b.outs[i]);
+            extractSigs(b,   sinks);
+            extractSigs(flp, sinks); // Should be empty.
 
             // Set up the DAG-shrink environment:
             DagShrinker dag(c, sinks);
@@ -135,16 +133,10 @@ int main(int argc, char** argv)
 
             // Map the old reference to point into the shrunk circuit:
             map(dag.resultMap(), b);
-            map(dag.resultMap(), flp);
+            map(dag.resultMap(), flp); // Should be empty.
 
             // Copy the shrunk circuit back:
             dag.copyResult(c);
-
-            // Some sanity checks:
-            for (int i = 0; i < b.inps.size(); i++)
-                assert(b.inps[i] != gate_Undef);
-            for (int i = 0; i < b.outs.size(); i++)
-                assert(b.outs[i] != sig_Undef);
         }
 
 #if 0

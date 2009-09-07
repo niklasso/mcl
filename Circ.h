@@ -244,8 +244,22 @@ void makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m);
 
 void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
- static inline
- void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
+static inline
+void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
+
+// Extract signals contained within some data-structure:
+static inline void extractSigs(Sig x,  vec<Sig>& xs){ xs.push(x); }
+static inline void extractSigs(Gate g, vec<Sig>& xs){ xs.push(mkSig(g)); }
+template <class T>
+static inline void extractSigs(const vec<T>& ys, vec<Sig>& xs){
+    for (int i = 0; i < ys.size(); i++)
+        extractSigs(ys[i], xs); }
+static inline void extractSigs(const Box& b, vec<Sig>& xs){ extractSigs(b.inps, xs); extractSigs(b.outs, xs); }
+static inline void extractSigs(const Flops& flps, vec<Sig>& xs){
+     for (int i = 0; i < flps.size(); i++){
+         xs.push(mkSig(flps[i]));
+         xs.push(flps.def(flps[i]));
+     } }
 
 //=================================================================================================
 // Map functions:
