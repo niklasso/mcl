@@ -18,6 +18,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include "mtl/Sort.h"
+#include "mtl/XAlloc.h"
 #include "utils/Options.h"
 #include "circ/Circ.h"
 
@@ -158,7 +159,7 @@ void Circ::restrashAll()
     // printf("New strash size: %d\n", strash_cap);
 
     // Allocate and initialize memory for new table:
-    strash = (Gate*)realloc(strash, sizeof(Gate) * strash_cap);
+    strash = (Gate*)xrealloc(strash, sizeof(Gate) * strash_cap);
     for (unsigned int i = 0; i < strash_cap; i++)
         strash[i] = gate_Undef;
 
