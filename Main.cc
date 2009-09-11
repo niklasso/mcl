@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "circ/Clausify.h"
 #include "circ/Aiger.h"
 #include "circ/DagShrink.h"
-#include "circ/CombSweep.h"
+#include "circ/SatSweep.h"
 
 #include <cstdio>
 #include <cstring>
@@ -81,6 +81,7 @@ int main(int argc, char** argv)
     StringOption dimacs         ("MAIN", "dimacs", "If given, stop after producing CNF and write the result to this file.");
     IntOption    dash_iters     ("MAIN", "dash-iters", "Number of DAG Aware Rewriting iterations.", 5);
     BoolOption   split_output   ("MAIN", "split-output", "Split the topmost output conjunctions into multiple outputs.", true);
+    BoolOption   sweep          ("MAIN", "sweep", "Perform SAT-sweeping of the AIG.", false);
     
     parseOptions(argc, argv, true);
 
@@ -121,7 +122,29 @@ int main(int argc, char** argv)
         double parsed_time = cpuTime();
         printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
-        { 
+        if (sweep){ 
+            // Create a list of all references into the circuit that we need to keep:
+            vec<Sig> sinks; 
+            extractSigs(b,   sinks);
+            extractSigs(flp, sinks); // Should be empty.
+
+            // Set up the DAG-shrink environment:
+            SatSweeper<Solver> sweeper(c, sinks);
+            sweeper.sweep();
+
+            // Map the old reference to point into the shrunk circuit:
+            map(sweeper.resultMap(), b);
+            map(sweeper.resultMap(), flp); // Should be empty.
+
+            // Copy the shrunk circuit back:
+            sweeper.copyResult(c);
+
+            printf("|  Number of inputs:     %12d                                         |\n", c.nInps());
+            printf("|  Number of outputs:    %12d                                         |\n", b.outs.size());
+            printf("|  Number of gates:      %12d                                         |\n", c.nGates());
+        }
+
+        if (dash_iters > 0){ 
             // Create a list of all references into the circuit that we need to keep:
             vec<Sig> sinks; 
             extractSigs(b,   sinks);
@@ -139,46 +162,6 @@ int main(int argc, char** argv)
             dag.copyResult(c);
         }
 
-#if 0
-        Eqs cand; makeUnitClass(c, cand);
-
-        GSet props;
-        for (int i  = 0; i < b.outs.size(); i++)
-            props.insert(gate(b.outs[i]));
-
-        for (int k = 0; k < cand.size(); k++){
-            int i,j;
-            for (i = j = 0; i < cand[k].size(); i++)
-                if (!props.has(gate(cand[k][i])))
-                    cand[k][j++] = cand[k][i];
-            cand[k].shrink(i - j);
-        }
-
-        Eqs proven;
-        Solver             sweep_s;
-        sweep_s.verbosity = 0;
-        sweep_s.rnd_pol = true;
-        //Clausifyer<Solver, false, false> sweep_cl(c, sweep_s);
-        Clausifyer<Solver> sweep_cl(c, sweep_s);
-        combEqSweep(c, sweep_cl, sweep_s, cand, proven);
-
-        GMap<Sig> subst;
-        makeSubstMap(c, proven, subst);
-
-        Circ      tmp_circ;
-        GMap<Sig> tmp_m;
-        copyCircWithSubst(c, tmp_circ, subst, tmp_m);
-        map(tmp_m, b);
-        map(tmp_m, flp);
-        tmp_circ.moveTo(c);
-
-        printf("|  Number of inputs:     %12d                                         |\n", c.nInps());
-        printf("|  Number of outputs:    %12d                                         |\n", b.outs.size());
-        printf("|  Number of gates:      %12d                                         |\n", c.nGates());
-
-        dagShrinkIter(c, b, flp, 10);
-
-#endif
 
         // void circInfo (      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
         // {

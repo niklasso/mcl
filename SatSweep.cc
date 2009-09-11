@@ -1,4 +1,4 @@
-/************************************************************************************[CombSweep.cc]
+/*************************************************************************************[SatSweep.cc]
 Copyright (c) 2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -19,7 +19,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/Sort.h"
 #include "utils/System.h"
-#include "circ/CombSweep.h"
+#include "circ/SatSweep.h"
 
 using namespace Minisat;
 
@@ -326,7 +326,7 @@ static void printStatistics(int iters, const Solv& s, const EqsWithUnits& cands,
            );
 }
 
-int Minisat::combEqSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out)
+int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out)
 {
     printf("=================================[ SAT Sweeping ]=============================================\n");
     printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
@@ -384,7 +384,7 @@ int Minisat::combEqSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs
 }
 
 
-int Minisat::combEqSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out)
+int Minisat::satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out)
 {
     printf("=================================[ SAT Sweeping ]=============================================\n");
     printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
@@ -464,10 +464,6 @@ int Minisat::combEqSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, c
 }
 
 
-// template
-// void Minisat::combEqSweep<Solver>(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out);
-
-
 // NOTE: this is not useful in the presence of assumptions/constrains.
 void Minisat::makeUnitClass(const Circ& cin, Eqs& unit)
 {
@@ -489,3 +485,4 @@ void Minisat::makeUnitClass(const Circ& cin, Eqs& unit)
     for (Gate g = cin.firstGate(); g != gate_Undef; g = cin.nextGate(g))
         cls.push(mkSig(g, !val[g]));
 }
+
