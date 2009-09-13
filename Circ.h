@@ -179,7 +179,9 @@ class Flops {
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
     void copyTo(Flops& to) const { gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
 
-    void map_ (const GMap<Sig>& m, Flops& to) const {
+    // Duplicate the set of flops such that for each flop 'f', with input signal 'def', the result
+    // contains a corresponding flop where the input signal has been remapped according to 'm':
+    void mapInps(const GMap<Sig>& m, Flops& to) const {
         to.clear();
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
@@ -189,7 +191,11 @@ class Flops {
         }
     }
 
-    void comap(const GMap<Sig>& m, Flops& to) const {
+    // Duplicate the set of flops such that for each flop with output gate 'f', the result contains
+    // a corresponding flop where the output gate has been remapped according to 'm'.
+    // PRECONDITION: the gate-map 'm' can not map a gate to a signed signal so that the result can
+    // be used as a new flop output.
+    void mapOuts(const GMap<Sig>& m, Flops& to) const {
         to.clear();
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
@@ -200,7 +206,9 @@ class Flops {
         }
     }
 
-    void bimap (const GMap<Sig>& m, Flops& to) const {
+    // Performs a simulatenous 'mapInps()' and 'mapOuts()', completely adjusting a set of flops to
+    // reflect the change from a map 'm':
+    void map(const GMap<Sig>& m, Flops& to) const {
         to.clear();
         for (int i = 0; i < gates.size(); i++){
             Gate f   = gates[i];
@@ -266,9 +274,9 @@ static inline void extractSigs(const Flops& flps, vec<Sig>& xs){
 //
 
 
-static inline void map_ (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map_(m, tmp); tmp.moveTo(flps); }
-static inline void comap(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.comap(m, tmp); tmp.moveTo(flps); }
-static inline void map  (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.bimap(m, tmp); tmp.moveTo(flps); }
+static inline void mapInps(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapInps(m, tmp); tmp.moveTo(flps); }
+static inline void mapOuts(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapOuts(m, tmp); tmp.moveTo(flps); }
+static inline void map    (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map(m, tmp);     tmp.moveTo(flps); }
 
 static inline void map(const GMap<Sig>& m, Gate& g)    { if (g != gate_Undef) g = gate(m[g]); } // Use with care!
 static inline void map(const GMap<Sig>& m, Sig&  x)    { if (x != sig_Undef) x = m[gate(x)] ^ sign(x); }
