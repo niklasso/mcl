@@ -179,6 +179,9 @@ class Flops {
     void moveTo(Flops& to){ gates.moveTo(to.gates); defs.moveTo(to.defs); is_def.moveTo(to.is_def); }
     void copyTo(Flops& to) const { gates.copyTo(to.gates); defs.copyTo(to.defs); is_def.copyTo(to.is_def); }
 
+    // FIXME: the following methods don't need to be member functions, but could instead be defined
+    // separately.
+
     // Duplicate the set of flops such that for each flop 'f', with input signal 'def', the result
     // contains a corresponding flop where the input signal has been remapped according to 'm':
     void mapInps(const GMap<Sig>& m, Flops& to) const {
@@ -226,6 +229,7 @@ class Flops {
 //=================================================================================================
 // Circ utility functions:
 
+// FIXME: clean up this utility section. Maybe move to a separate "Circuit Prelude" source file?
 
 // Given certain values for inputs, calculate the values of all gates in the cone of influence
 // of a signal:

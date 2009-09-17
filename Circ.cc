@@ -352,6 +352,20 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
 }
 
 
+//=================================================================================================
+// This transformation copies the circuit 'src' into 'dst' while inlining the substitutions in
+// 'subst_map'. The substitution map should be defined such that for all gates 'g' in 'src':
+//
+//   1) 'subst_map[g]' is a signal in 'src' which should replace 'g'. If the gate 'g' is to be kept
+//   as it is, it is also ok to set 'subst_map[g]' to sig_Undef
+//
+//   2) If 'subst_map[g]' is different from sig_Undef, then 'subst_map[g]' must be smaller than 'g'
+//   with respect to some circuit topological order.
+//
+// The resulting 'copy_map' gives the location of each gate in the destination circuit.
+// 
+// FIXME: The documentation for this function is only partial. What is left is to describe how "only
+// occurences are substituted, but not the gates themselves."
 void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map)
 {
     // printf(" >>> COPYING CIRCUIT WITH SUBST: size-before=%d\n", dst.size());
