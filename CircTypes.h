@@ -99,6 +99,12 @@ class GMap : private vec<T>
         assert(index(g) < (unsigned)vec<T>::size()); }
 
  public:
+    // Create new GMap with zero capacity:
+    GMap(){}                                      
+
+    // Create new GMap with capacity to store gate 'g', initializing table-entries with 'e':
+    GMap(Gate g, const T& e){ growTo(g, e); }
+
     // FIXME: I think this works for empty vectors (gmaps), but I need to check.
     typedef T* iterator;
     iterator begin  (){ return &vec<T>::operator[](0); }
@@ -131,6 +137,12 @@ class SMap : private vec<T>
         assert(index(g) < (unsigned)vec<T>::size()); }
 
  public:
+    // Create new SMap with zero capacity:
+    SMap(){}                                      
+
+    // Create new SMap with capacity to store signal 'x', initializing table-entries with 'e':
+    SMap(Sig x, const T& e){ growTo(x, e); }
+
     // FIXME: I think this works for empty vectors (smaps), but I need to check.
     typedef T* iterator;
     iterator begin  (){ return &vec<T>::operator[](0); }
