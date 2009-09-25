@@ -866,7 +866,7 @@ void  DagShrinker::shrinkIter(int n_iters)
         shrink();
         printStats();
     }
-    printStatsFooter();
+    // printStatsFooter();
 }
 
 
@@ -880,7 +880,7 @@ void  DagShrinker::shrinkIter(double frac)
         size_after  = target.nGates();
         printStats();
     } while (frac < ((double)(size_before - size_after) / size_before));
-    printStatsFooter();
+    // printStatsFooter();
 }
 
 

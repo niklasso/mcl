@@ -206,6 +206,8 @@ int main(int argc, char** argv)
             }
         }
 
+        printf("===========================[ Clausify Statistics ]=============================\n");
+        printf("|                                                                             |\n");
         printf("|  Number of variables:  %12d                                         |\n", S.nVars());
         printf("|  Number of clauses:    %12d                                         |\n", S.nClauses());
 
