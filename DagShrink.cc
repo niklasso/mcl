@@ -738,6 +738,7 @@ static inline void splitDisj(Circ& c, Sig x, SSet& all_outputs)
 }
 
 // TODO: this should be re-evaluated/tested and perhaps reimplemented.
+// FIXME: isn't there a normalization step to remove duplicates and check inconsistenies missing at the end?
 // Breaking down big output conjunctions, and merging equivalent output nodes:
 void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
 {
@@ -833,6 +834,7 @@ void DagShrinker::shrink(bool only_copy)
     for (int i = 0; i < sinks.size(); i++){
         Gate source_g = gate(sinks[i]);
         Gate target_g = gate(m[source_g]);
+        assert(source_g != gate_Undef);
         target.bumpFanout(target_g);
     }
 
