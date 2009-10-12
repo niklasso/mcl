@@ -20,13 +20,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Circ_h
 #define Minisat_Circ_h
 
+#include <stdio.h>
+
 #include "mtl/Queue.h"
 #include "core/SolverTypes.h"
 #include "circ/CircTypes.h"
 #include "circ/Matching.h"
 #include "circ/Normalization.h"
-
-#include <cstdio>
 
 namespace Minisat {
 

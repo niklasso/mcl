@@ -22,8 +22,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "circ/CircTypes.h"
 
-#include <cstdio>
-
 namespace Minisat {
 
 //=================================================================================================

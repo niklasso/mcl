@@ -17,11 +17,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
+
 #include "simp/SimpSolver.h"
 #include "circ/Hardware.h"
 #include "circ/Clausify.h"
-
-#include <cstdio>
 
 using namespace Minisat;
 
@@ -216,9 +218,6 @@ void Minisat::multiplierCorrect(int size)
     printf("Multiplier of size %d number of gates = %d, number of clauses = %d, output bits = %d\n", size, c.nGates(), s.nClauses(), result.size());
     printf("Multiplier of size %d correct.\n", size);
 }
-
-#include <cmath>
-#include <cstring>
 
 /*
 static void readBinary(const char* number, vec<bool>& output_bits){
