@@ -55,7 +55,7 @@ static void SIGINT_handler(int signum) {
     printf("\n"); printf("*** INTERRUPTED ***\n");
     printStats(*solver);
     printf("\n"); printf("*** INTERRUPTED ***\n");
-    exit(1); }
+    _exit(1); }
 
 
 //=================================================================================================
