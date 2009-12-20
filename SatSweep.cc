@@ -477,7 +477,7 @@ void Minisat::makeUnitClass(const Circ& cin, Eqs& unit)
         if (type(g) == gtype_And){
             Sig x   = cin.lchild(g);
             Sig y   = cin.rchild(g);
-            val[g] = (val[gate(x)] ^ sign(x)) && (val[gate(x)] ^ sign(x));
+            val[g] = (val[gate(x)] ^ sign(x)) && (val[gate(y)] ^ sign(y));
         }
 
     vec<Sig>& cls = unit.last();
