@@ -29,7 +29,7 @@ namespace Minisat {
 //=================================================================================================
 // An almost naive clausifyer for Circuits:
 
-template<class S, bool match_bigands = true, bool match_muxes = true>
+template<class S, bool match_bigands = true, bool match_muxes = true, bool extra_clauses = false>
 class Clausifyer
 {
     const Circ& circ;
@@ -141,8 +141,9 @@ class Clausifyer
                         solver.addClause( lg,  lx, ~lz);
 
                         // Extra clauses:
-                        // solver.addClause(~ly, ~lz,  lg);
-                        // solver.addClause( ly,  lz, ~lg);
+                        if (extra_clauses){
+                            solver.addClause(~ly, ~lz,  lg);
+                            solver.addClause( ly,  lz, ~lg); }
                     }else if (match_bigands){
                         cm.matchAnds(circ, g, tmp_big_and, false);
                     
