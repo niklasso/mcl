@@ -75,6 +75,7 @@ int main(int argc, char** argv)
 
     // Extra options:
     //
+    IntOption    verb           ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
     BoolOption   pre            ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
     BoolOption   clausify_naive ("MAIN", "clausify-naive", "Use naive clausification", false);
     StringOption aiger          ("MAIN", "aiger",  "If given, stop after preprocessing AIG and write the result to this file.");
@@ -89,6 +90,8 @@ int main(int argc, char** argv)
     double     initial_time = cpuTime();
 
     if (!pre) S.eliminate(true);
+
+    S.verbosity = verb;
 
     solver = &S;
     signal(SIGINT,SIGINT_handler);
