@@ -64,9 +64,8 @@ static void SIGINT_handler(int signum) {
 
 int main(int argc, char** argv)
 {
+    setlinebuf(stdout);
     setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input is in plain or gzipped binary AIGER.\n");
-    printf("Using MiniSat 2.0 beta\n");
-
 #if defined(__linux__)
     fpu_control_t oldcw, newcw;
     _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
@@ -270,6 +269,8 @@ int main(int argc, char** argv)
         }
 #ifdef NDEBUG
         exit(ret ? 10 : 20);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+        return (ret ? 10 : 20);
 #endif
     }
 }
