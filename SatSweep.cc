@@ -326,13 +326,14 @@ static void printStatistics(int iters, const Solv& s, const EqsWithUnits& cands,
            );
 }
 
-int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out)
+int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out, int verbosity)
 {
-    printf("=================================[ SAT Sweeping ]=============================================\n");
-    printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
-    printf("|  NON   AVG.       |  NON   AVG.       |                                           |        |\n");
-    printf("|  TRIV  SIZE UNITS |  TRIV  SIZE UNITS |          VARS   CLAUSES ITER SOLVS CONFLS |        |\n");
-    printf("==============================================================================================\n");
+    if (verbosity >= 1){
+        printf("=================================[ SAT Sweeping ]=============================================\n");
+        printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
+        printf("|  NON   AVG.       |  NON   AVG.       |                                           |        |\n");
+        printf("|  TRIV  SIZE UNITS |  TRIV  SIZE UNITS |          VARS   CLAUSES ITER SOLVS CONFLS |        |\n");
+        printf("==============================================================================================\n"); }
 
     // Make sure that all gates refered to by some signal in 'eqs_in'
     // are given a variable in the Clausifyer. This could be done
@@ -361,7 +362,7 @@ int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& e
             // Other classes class:
             curr.addClass(eqs_in[i]);
 
-    printStatistics(-1, s, curr, proven);
+    if (verbosity >= 1) printStatistics(-1, s, curr, proven);
 
     // Iterate prove/refinement loop:
     //
@@ -373,9 +374,9 @@ int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& e
             EqsWithUnits apa;
             curr.refine(cin, s, cl, apa);
             apa.moveTo(curr);
-            printStatistics(refines, s, curr, proven);
+            if (verbosity >= 1) printStatistics(refines, s, curr, proven);
         }else{
-            printStatistics(refines, s, curr, proven);
+            if (verbosity >= 1) printStatistics(refines, s, curr, proven);
             break;
         }
 
@@ -384,13 +385,14 @@ int Minisat::satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& e
 }
 
 
-int Minisat::satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out)
+int Minisat::satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out, int verbosity)
 {
-    printf("=================================[ SAT Sweeping ]=============================================\n");
-    printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
-    printf("|  NON   AVG.       |  NON   AVG.       |                                           |        |\n");
-    printf("|  TRIV  SIZE UNITS |  TRIV  SIZE UNITS |          VARS   CLAUSES ITER SOLVS CONFLS |        |\n");
-    printf("==============================================================================================\n");
+    if (verbosity >= 1){
+        printf("=================================[ SAT Sweeping ]=============================================\n");
+        printf("|     CANDIDATES    |      PROVEN       |       SOLVER                              |  TIME  |\n");
+        printf("|  NON   AVG.       |  NON   AVG.       |                                           |        |\n");
+        printf("|  TRIV  SIZE UNITS |  TRIV  SIZE UNITS |          VARS   CLAUSES ITER SOLVS CONFLS |        |\n");
+        printf("==============================================================================================\n"); }
 
     // Make sure that all gates refered to by some signal in 'eqs_in'
     // are given a variable in the Clausifyer. This could be done
@@ -425,9 +427,9 @@ int Minisat::satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, cons
             // Other classes class:
             curr.addClass(eqs_in[i]);
 
-    printStatistics(-1, s, curr, proven);
+    if (verbosity >= 1) printStatistics(-1, s, curr, proven);
     s.eliminate();
-    printStatistics(-1, s, curr, proven);
+    if (verbosity >= 1) printStatistics(-1, s, curr, proven);
 
     // Iterate prove/refinement loop:
     //
@@ -444,9 +446,9 @@ int Minisat::satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, cons
                 s.eliminate();
                 assigns = s.nAssigns();
             }
-            printStatistics(refines, s, curr, proven);
+            if (verbosity >= 1) printStatistics(refines, s, curr, proven);
         }else{
-            printStatistics(refines, s, curr, proven);
+            if (verbosity >= 1) printStatistics(refines, s, curr, proven);
             break;
         }
 

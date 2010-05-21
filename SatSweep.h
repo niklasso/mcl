@@ -28,8 +28,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 namespace Minisat {
 
-int  satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out);
-int  satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out);
+int  satSweep(Circ& cin, Clausifyer<Solver>& cl, Solver& s, const Eqs& eqs_in, Eqs& eqs_out, int verbosity = 1);
+int  satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& eqs_in, Eqs& eqs_out, int verbosity = 1);
 
 void makeUnitClass(const Circ& cin, Eqs& unit);
 
@@ -47,6 +47,8 @@ class SatSweeper
 
     void             copyResult(Circ& out);
     const GMap<Sig>& resultMap ();
+
+    int                verbosity;
 
  private:
 
@@ -72,7 +74,7 @@ inline void             SatSweeper<Solver>::copyResult(Circ& out){ GMap<Sig> dum
 
 
 template<class Solver>
-SatSweeper<Solver>::SatSweeper(const Circ& src, const vec<Sig>& snk) : source(src), sinks(snk), cl(source, solver)
+SatSweeper<Solver>::SatSweeper(const Circ& src, const vec<Sig>& snk) : verbosity(1), source(src), sinks(snk), cl(source, solver)
 {
     // Initialize the target to a clone of the source, and the source to target map to the
     // 'identity map':
@@ -87,29 +89,28 @@ void SatSweeper<Solver>::sweep()
     Eqs cand; 
     makeUnitClass(target, cand);
 
-    printf(" --- SWEEP made unit class.\n");
+    // printf(" --- SWEEP made unit class.\n");
 
     // Setup SAT solver:
-    solver.verbosity = 0;    // TODO: The verbosity really should be default zero in MiniSat ...
-    solver.rnd_pol   = true;
+    solver.rnd_pol = true;
 
     // Prove which subset of the candidates that holds in the source circuit:
     Eqs proven;
-    satSweep(target, cl, solver, cand, proven);
+    satSweep(target, cl, solver, cand, proven, verbosity);
 
-    printf(" --- SWEEP proved equivalences.\n");
+    // printf(" --- SWEEP proved equivalences.\n");
 
     // Copy the whole source circuit while inlining all proven equivalences:
     GMap<Sig> subst;
     makeSubstMap(target, proven, subst);
 
-    printf(" --- SWEEP created substitution map.\n");
+    // printf(" --- SWEEP created substitution map.\n");
 
     Circ      sweeped_circ;
     GMap<Sig> sweeped_map;
     copyCircWithSubst(target, sweeped_circ, subst, sweeped_map);
 
-    printf(" --- SWEEP inlined substitution map.\n");
+    // printf(" --- SWEEP inlined substitution map.\n");
 
     // Remap the sinks to point to the sweeped circuit:
     vec<Sig> sweeped_sinks; 
@@ -117,13 +118,13 @@ void SatSweeper<Solver>::sweep()
     map(m,           sweeped_sinks); // Remap to point to target circuit.
     map(sweeped_map, sweeped_sinks); // Remap to point to sweeped circuit.
 
-    printf(" --- SWEEP remapped the set of sinks.\n");
+    // printf(" --- SWEEP remapped the set of sinks.\n");
 
     // Remove redundant logic left in the target circuit:
     DagShrinker dag(sweeped_circ, sweeped_sinks);
     dag.shrink(true);
 
-    printf(" --- SWEEP removed redundant logic.\n");
+    // printf(" --- SWEEP removed redundant logic.\n");
     
     // Adjust the target-map and set the target the final result. The result is the composition of:
     // previous 'm', 'sweeped_map', and the result map from removing redundant logic (in that
@@ -131,12 +132,12 @@ void SatSweeper<Solver>::sweep()
     map(sweeped_map,     m);
     map(dag.resultMap(), m);
 
-    printf(" --- SWEEP remapped the resulting source to target map.\n");
+    // printf(" --- SWEEP remapped the resulting source to target map.\n");
     
     // Copy the resulting circuit to the target:
     dag.copyResult(target);
 
-    printf(" --- SWEEP copied the result to target circuit.\n");
+    // printf(" --- SWEEP copied the result to target circuit.\n");
 }
 
 

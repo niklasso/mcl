@@ -812,7 +812,7 @@ void Minisat::removeDeadLogic(Circ& c, Box& b, Flops& flp)
 // New DAG-shrink helper class:
 //
 
-DagShrinker::DagShrinker(const Circ& src, const vec<Sig>& snk) : source(src), sinks(snk), rnd_seed(123456789)
+DagShrinker::DagShrinker(const Circ& src, const vec<Sig>& snk) : verbosity(1), source(src), sinks(snk), rnd_seed(123456789)
 {
     // Initialize the target to a clone of the source, and the source to target map to the
     // 'identity map':
@@ -861,10 +861,10 @@ void DagShrinker::shrink(bool only_copy)
 
 void  DagShrinker::shrinkIter(int n_iters)
 {
-    printStatsHeader();
+    if (verbosity >= 1) printStatsHeader();
     for (int i = 0; i < n_iters; i++){
         shrink();
-        printStats();
+        if (verbosity >= 1) printStats();
     }
     // printStatsFooter();
 }
@@ -872,13 +872,13 @@ void  DagShrinker::shrinkIter(int n_iters)
 
 void  DagShrinker::shrinkIter(double frac)
 {
-    printStatsHeader();
+    if (verbosity >= 1) printStatsHeader();
     int size_before, size_after;
     do {
         size_before = target.nGates();
         shrink();
         size_after  = target.nGates();
-        printStats();
+        if (verbosity >= 1) printStats();
     } while (frac < ((double)(size_before - size_after) / size_before));
     // printStatsFooter();
 }

@@ -54,6 +54,8 @@ class DagShrinker
     const GMap<Sig>& resultMap();
     void             copyResult(Circ& out);
 
+    int              verbosity;
+
  private:
 
     const Circ&      source;
@@ -62,6 +64,7 @@ class DagShrinker
     CircMatcher      cm;
     GMap<Sig>        m;
     double           rnd_seed;
+
 };
 
 
