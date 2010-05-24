@@ -163,6 +163,8 @@ class Flops {
  public:
     void clear()               { gates.clear(); defs.clear(); is_def.clear(); }
     void defineFlop(Gate f, Sig def){
+        assert(type(f) == gtype_Inp);
+
         defs  .growTo(f,   sig_Undef);
         is_def.growTo(def, 0);
 
