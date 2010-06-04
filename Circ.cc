@@ -50,6 +50,12 @@ Circ::Circ()
 }
 
 
+Circ::~Circ()
+{
+    if (strash) free(strash);
+}
+
+
 void Circ::clear()
 {
     gates.clear();

@@ -78,6 +78,7 @@ class Circ
     uint32_t rewrite_mode;
 
     Circ();
+    ~Circ();
 
     // Misc. :
     //
