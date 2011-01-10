@@ -32,16 +32,15 @@ prefix         ?= /usr/local
 ## Write Configuration  ###########################################################################
 
 config:
-	rm -rf config.mk
-	echo 'BUILD_DIR?=$(BUILD_DIR)'           >> config.mk
-	echo 'MCL_RELSYM?=$(MCL_RELSYM)' >> config.mk
-	echo 'MCL_REL?=$(MCL_REL)'       >> config.mk
-	echo 'MCL_DEB?=$(MCL_DEB)'       >> config.mk
-	echo 'MCL_PRF?=$(MCL_PRF)'       >> config.mk
-	echo 'MCL_FPIC?=$(MCL_FPIC)'     >> config.mk
-	echo 'MINISAT_INCLUDE?=$(MINISAT_INCLUDE)' >> config.mk
-	echo 'MINISAT_LIB?=$(MINISAT_LIB)' >> config.mk
-	echo 'prefix?=$(prefix)'                 >> config.mk
+	@( echo 'BUILD_DIR?=$(BUILD_DIR)'            ; \
+	   echo 'MCL_RELSYM?=$(MCL_RELSYM)'	     ; \
+	   echo 'MCL_REL?=$(MCL_REL)'      	     ; \
+	   echo 'MCL_DEB?=$(MCL_DEB)'      	     ; \
+	   echo 'MCL_PRF?=$(MCL_PRF)'      	     ; \
+	   echo 'MCL_FPIC?=$(MCL_FPIC)'    	     ; \
+	   echo 'MINISAT_INCLUDE?=$(MINISAT_INCLUDE)'; \
+	   echo 'MINISAT_LIB?=$(MINISAT_LIB)'	     ; \
+	   echo 'prefix?=$(prefix)'                  ) > config.mk
 
 ## Configurable options end #######################################################################
 
@@ -62,7 +61,7 @@ MCL_DLIB = libmcl.so# Name of MCL shared library.
 # Shared Library Version
 SOMAJOR=1
 SOMINOR=0
-SORELEASE=0
+SORELEASE=.0
 
 MCL_CXXFLAGS = -I. -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -Wall -Wno-parentheses -Wextra $(MINISAT_INCLUDE)
 MCL_LDFLAGS  = -Wall -lz $(MINISAT_LIB)
@@ -82,7 +81,7 @@ OBJS = $(SRCS:.cc=.o)
 lr:	$(BUILD_DIR)/release/lib/$(MCL_SLIB)
 ld:	$(BUILD_DIR)/debug/lib/$(MCL_SLIB)
 lp:	$(BUILD_DIR)/profile/lib/$(MCL_SLIB)
-lsh:	$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE)
+lsh:	$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE)
 
 ## Build-type Compile-flags:
 $(BUILD_DIR)/release/%.o:			MCL_CXXFLAGS +=$(MCL_REL) $(MCL_RELSYM)
@@ -94,7 +93,7 @@ $(BUILD_DIR)/dynamic/%.o:			MCL_CXXFLAGS +=$(MCL_REL) $(MCL_FPIC)
 $(BUILD_DIR)/release/lib/$(MCL_SLIB):	$(foreach o,$(OBJS),$(BUILD_DIR)/release/$(o))
 $(BUILD_DIR)/debug/lib/$(MCL_SLIB):		$(foreach o,$(OBJS),$(BUILD_DIR)/debug/$(o))
 $(BUILD_DIR)/profile/lib/$(MCL_SLIB):	$(foreach o,$(OBJS),$(BUILD_DIR)/profile/$(o))
-$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE):	$(foreach o,$(OBJS),$(BUILD_DIR)/dynamic/$(o))
+$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE):	$(foreach o,$(OBJS),$(BUILD_DIR)/dynamic/$(o))
 
 ## Compile rules (these should be unified, buit I have not yet found a way which works in GNU Make)
 $(BUILD_DIR)/release/%.o:	%.cc
@@ -124,17 +123,10 @@ $(BUILD_DIR)/dynamic/%.o:	%.cc
 	$(VERB) $(AR) -rcs $@ $^
 
 ## Shared Library rule
-$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE):
+$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE):
 	$(ECHO) echo Linking Shared Library: $@
 	$(VERB) mkdir -p $(dir $@)
 	$(VERB) $(CXX) -o $@ -shared -Wl,-soname,$(MCL_DLIB).$(SOMAJOR) $^ $(MCL_LDFLAGS)
-
-## Shared Library links
-#$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR):	$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE)
-#	ln -sf -T $(notdir $^) $@
-#
-#$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB):	$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR)
-#	ln -sf -T $(notdir $^) $@
 
 install:	install-headers install-lib
 
@@ -146,11 +138,11 @@ install-headers:
 	  $(INSTALL) -m 644 $$h $(DESTDIR)$(includedir)/$$h ; \
 	done
 
-install-lib: $(BUILD_DIR)/release/lib/$(MCL_SLIB) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE) #$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB) 
+install-lib: $(BUILD_DIR)/release/lib/$(MCL_SLIB) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE)
 	$(INSTALL) -d $(DESTDIR)$(libdir)
-	$(INSTALL) -m 644 $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR).$(SORELEASE) $(DESTDIR)$(libdir)
-#	$(INSTALL) -m 644 $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR) $(DESTDIR)$(libdir)
-#	$(INSTALL) -m 644 $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB) $(DESTDIR)$(libdir)
+	$(INSTALL) -m 644 $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE) $(DESTDIR)$(libdir)
+	ln -sf $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE) $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR)
+	ln -sf $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR) $(DESTDIR)$(libdir)/$(MCL_DLIB)
 	$(INSTALL) -m 644 $(BUILD_DIR)/release/lib/$(MCL_SLIB) $(DESTDIR)$(libdir)
 
 ## Include generated dependencies
