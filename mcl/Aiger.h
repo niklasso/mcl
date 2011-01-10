@@ -1,5 +1,5 @@
-/****************************************************************************************[ReTime.h]
-Copyright (c) 2008, Niklas Sorensson
+/*****************************************************************************************[Aiger.h]
+Copyright (c) 2007, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -17,18 +17,27 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_ReTime_h
-#define Minisat_ReTime_h
+#ifndef Minisat_Aiger_h
+#define Minisat_Aiger_h
 
-#include "circ/Circ.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 
 //=================================================================================================
-// Functions for moving (pushing/pulling) flops in circuits:
+// Functions for parsing and printing circuits in the AIGER format. See <http://fmv.jku.at/aiger/>
+// for specification of this format as well as supporting tools and example circuits.
 
-void fwdReTime(Circ& c, Box& b, Flops& flp);
-void bwdReTime(Circ& c, Box& b, Flops& flp);
+struct AigerCirc {
+    Circ       circ;
+    vec<Gate>  inputs;
+    vec<Gate>  latches;
+    vec<Sig>   outputs;
+    GMap<Sig>  latch_defs;
+};
+
+void readAiger (const char* filename,       Circ& c,       Box& b,       Flops& flp);
+void writeAiger(const char* filename, const Circ& c, const Box& b, const Flops& flp);
 
 //=================================================================================================
 

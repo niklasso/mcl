@@ -19,9 +19,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <stdio.h>
 
-#include "mtl/Sort.h"
-#include "mtl/Alg.h"
-#include "circ/Normalization.h"
+#include "minisat/mtl/Sort.h"
+#include "minisat/mtl/Alg.h"
+#include "mcl/Normalization.h"
 
 using namespace Minisat;
 

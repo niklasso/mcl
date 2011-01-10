@@ -20,9 +20,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Clausify_h
 #define Minisat_Clausify_h
 
-#include "core/SolverTypes.h"
-#include "simp/SimpSolver.h"
-#include "circ/Circ.h"
+#include "minisat/core/SolverTypes.h"
+#include "minisat/simp/SimpSolver.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 

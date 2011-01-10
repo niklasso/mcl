@@ -17,9 +17,9 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "mtl/Sort.h"
-#include "utils/System.h"
-#include "circ/SatSweep.h"
+#include "minisat/mtl/Sort.h"
+#include "minisat/utils/System.h"
+#include "mcl/SatSweep.h"
 
 using namespace Minisat;
 
@@ -182,7 +182,7 @@ public:
 struct RevSigLt { bool operator()(Sig x, Sig y) const { return y < x; } };
 
 template<class SomeSolver>
-bool EqsWithUnits::falsify(const Circ& cin, SomeSolver& s, Clausifyer<SomeSolver>& cl, EqsWithUnits& proven)
+bool EqsWithUnits::falsify(const Circ&, SomeSolver& s, Clausifyer<SomeSolver>& cl, EqsWithUnits& proven)
 {
     // Find trivial units:
     //
@@ -255,7 +255,7 @@ bool EqsWithUnits::falsify(const Circ& cin, SomeSolver& s, Clausifyer<SomeSolver
 
 
 template<class SomeSolver>
-void EqsWithUnits::refine(const Circ& cin, SomeSolver& s, Clausifyer<SomeSolver>& cl, EqsWithUnits& refined)
+void EqsWithUnits::refine(const Circ&, SomeSolver&, Clausifyer<SomeSolver>& cl, EqsWithUnits& refined)
 {
     vec<Sig> class_t;
     vec<Sig> class_f;

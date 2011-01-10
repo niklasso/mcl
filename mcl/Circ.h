@@ -22,11 +22,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <stdio.h>
 
-#include "mtl/Queue.h"
-#include "core/SolverTypes.h"
-#include "circ/CircTypes.h"
-#include "circ/Matching.h"
-#include "circ/Normalization.h"
+#include "minisat/mtl/Queue.h"
+#include "minisat/core/SolverTypes.h"
+#include "mcl/CircTypes.h"
+#include "mcl/Matching.h"
+#include "mcl/Normalization.h"
 
 namespace Minisat {
 

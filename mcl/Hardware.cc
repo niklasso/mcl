@@ -21,9 +21,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <math.h>
 #include <string.h>
 
-#include "simp/SimpSolver.h"
-#include "circ/Hardware.h"
-#include "circ/Clausify.h"
+#include "minisat/simp/SimpSolver.h"
+#include "mcl/Hardware.h"
+#include "mcl/Clausify.h"
 
 using namespace Minisat;
 

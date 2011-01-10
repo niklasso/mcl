@@ -20,8 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_CircTypes_h
 #define Minisat_CircTypes_h
 
-#include "mtl/IntTypes.h"
-#include "mtl/Vec.h"
+#include "minisat/mtl/IntTypes.h"
+#include "minisat/mtl/Vec.h"
 
 namespace Minisat {
 
@@ -81,7 +81,7 @@ inline  bool     sign      (Sig p)                       { return bool(p.x & 2);
 inline  Gate     gate      (Sig p)                       { return mkGate(p.x >> 2, GateType(p.x & 1)); }
 inline  GateType type      (Sig p)                       { return type(gate(p)); }
 
-// Mapping Sigerals to and from compact integers suitable for array indexing:
+// Mapping Signals to and from compact integers suitable for array indexing:
 inline  Sig          toSig     (unsigned  i)         { Sig p; p.x = i; return p; } 
 
 // Note! Use SMap instead of this:
@@ -94,10 +94,6 @@ inline unsigned int index (Sig s) { return s.x >> 1; }
 template<class T>
 class GMap : private vec<T>
 {
-    void boundsCheck(Gate g) const {
-        assert(g != gate_Undef);
-        assert(index(g) < (unsigned)vec<T>::size()); }
-
  public:
     // Create new GMap with zero capacity:
     GMap(){}                                      
@@ -111,8 +107,8 @@ class GMap : private vec<T>
     iterator end    (){ return &vec<T>::operator[](vec<T>::size()); }
 
     // Vector interface:
-    const T& operator [] (Gate g)  const { boundsCheck(g); return vec<T>::operator[](index(g)); }
-    T&       operator [] (Gate g)        { boundsCheck(g); return vec<T>::operator[](index(g)); }
+    const T& operator [] (Gate g)  const { assert(g != gate_Undef); assert(index(g) < (unsigned)vec<T>::size()); return vec<T>::operator[](index(g)); }
+    T&       operator [] (Gate g)        { assert(g != gate_Undef); assert(index(g) < (unsigned)vec<T>::size()); return vec<T>::operator[](index(g)); }
 
     // Note the slightly different semantics to vec's growTo, namely that
     // this guarantees that the element 'g' can be indexed after this operation.
@@ -132,10 +128,6 @@ class GMap : private vec<T>
 template<class T>
 class SMap : private vec<T>
 {
-    void boundsCheck(Gate g) const {
-        assert(g != gate_Undef);
-        assert(index(g) < (unsigned)vec<T>::size()); }
-
  public:
     // Create new SMap with zero capacity:
     SMap(){}                                      
@@ -149,8 +141,8 @@ class SMap : private vec<T>
     iterator end    (){ return &vec<T>::operator[](vec<T>::size()); }
 
     // Vector interface:
-    const T& operator [] (Sig x) const   { return vec<T>::operator[](index(x)); }
-    T&       operator [] (Sig x)         { return vec<T>::operator[](index(x)); }
+    const T& operator [] (Sig x) const   { assert(x != sig_Undef); assert(index(x) < (unsigned)vec<T>::size()); return vec<T>::operator[](index(x)); }
+    T&       operator [] (Sig x)         { assert(x != sig_Undef); assert(index(x) < (unsigned)vec<T>::size()); return vec<T>::operator[](index(x)); }
 
     // Note the slightly different semantics to vec's capacity, namely that
     // this guarantees that the element 'g' can be indexed after this operation.

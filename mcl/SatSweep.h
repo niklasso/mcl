@@ -20,11 +20,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SatSweep_h
 #define Minisat_SatSweep_h
 
-#include "core/Solver.h"
-#include "simp/SimpSolver.h"
-#include "circ/Circ.h"
-#include "circ/Clausify.h"
-#include "circ/DagShrink.h"
+#include "minisat/core/Solver.h"
+#include "minisat/simp/SimpSolver.h"
+#include "mcl/Circ.h"
+#include "mcl/Clausify.h"
+#include "mcl/DagShrink.h"
 
 namespace Minisat {
 

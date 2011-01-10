@@ -20,8 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_DagShrink_h
 #define Minisat_DagShrink_h
 
-#include "circ/Circ.h"
-#include "circ/Aiger.h"
+#include "mcl/Aiger.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 

@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Hardware_h
 #define Minisat_Hardware_h
 
-#include "circ/Circ.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 

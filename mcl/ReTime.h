@@ -1,4 +1,4 @@
-/*******************************************************************************************[Smv.h]
+/****************************************************************************************[ReTime.h]
 Copyright (c) 2008, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -17,18 +17,18 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Smv_h
-#define Minisat_Smv_h
+#ifndef Minisat_ReTime_h
+#define Minisat_ReTime_h
 
-#include "circ/Circ.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 
 //=================================================================================================
-// Functions for parsing and printing circuits in the loosely defined FLAT-SMV format.
+// Functions for moving (pushing/pulling) flops in circuits:
 
-void readSmv (const char* filename, Circ& c,       Box& b,       Flops& flp);
-void writeSmv(const char* filename, Circ& c, const Box& b, const Flops& flp, bool tip_mode = false, bool structured = true);
+void fwdReTime(Circ& c, Box& b, Flops& flp);
+void bwdReTime(Circ& c, Box& b, Flops& flp);
 
 //=================================================================================================
 

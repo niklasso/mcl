@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Normalization_h
 #define Minisat_Normalization_h
 
-#include "circ/CircTypes.h"
+#include "mcl/CircTypes.h"
 
 namespace Minisat {
 
