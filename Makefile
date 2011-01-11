@@ -24,7 +24,7 @@ MCL_FPIC   ?= -fpic
 
 # Dependencies
 MINISAT_INCLUDE?=
-MINISAT_LIB    ?=-Lminisat
+MINISAT_LIB    ?=-lminisat
 
 # GNU Standard Install Prefix
 prefix         ?= /usr/local
