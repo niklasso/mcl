@@ -1,7 +1,6 @@
-## TODO ###########################################################################################
-#
+###################################################################################################
 
-.PHONY:	lr ld lp lsh config all
+.PHONY:	lr ld lp lsh config all install install-headers install-lib clean distclean
 all:	lr lsh
 
 ## Load Previous Configuration ####################################################################
@@ -66,11 +65,10 @@ SORELEASE=.0
 MCL_CXXFLAGS = -I. -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -Wall -Wno-parentheses -Wextra $(MINISAT_INCLUDE)
 MCL_LDFLAGS  = -Wall -lz $(MINISAT_LIB)
 
+ECHO=@echo
 ifeq ($(VERB),)
-ECHO=@
 VERB=@
 else
-ECHO=#
 VERB=
 endif
 
@@ -97,36 +95,40 @@ $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE):	$(foreac
 
 ## Compile rules (these should be unified, buit I have not yet found a way which works in GNU Make)
 $(BUILD_DIR)/release/%.o:	%.cc
-	$(ECHO) echo Compiling: $@
+	$(ECHO) Compiling: $@
 	$(VERB) mkdir -p $(dir $@) $(dir $(BUILD_DIR)/dep/$*.d)
 	$(VERB) $(CXX) $(MCL_CXXFLAGS) $(CXXFLAGS) -c -o $@ $< -MMD -MF $(BUILD_DIR)/dep/$*.d
 
 $(BUILD_DIR)/profile/%.o:	%.cc
-	$(ECHO) echo Compiling: $@
+	$(ECHO) Compiling: $@
 	$(VERB) mkdir -p $(dir $@) $(dir $(BUILD_DIR)/dep/$*.d)
 	$(VERB) $(CXX) $(MCL_CXXFLAGS) $(CXXFLAGS) -c -o $@ $< -MMD -MF $(BUILD_DIR)/dep/$*.d
 
 $(BUILD_DIR)/debug/%.o:	%.cc
-	$(ECHO) echo Compiling: $@
+	$(ECHO) Compiling: $@
 	$(VERB) mkdir -p $(dir $@) $(dir $(BUILD_DIR)/dep/$*.d)
 	$(VERB) $(CXX) $(MCL_CXXFLAGS) $(CXXFLAGS) -c -o $@ $< -MMD -MF $(BUILD_DIR)/dep/$*.d
 
 $(BUILD_DIR)/dynamic/%.o:	%.cc
-	$(ECHO) echo Compiling: $@
+	$(ECHO) Compiling: $@
 	$(VERB) mkdir -p $(dir $@) $(dir $(BUILD_DIR)/dep/$*.d)
 	$(VERB) $(CXX) $(MCL_CXXFLAGS) $(CXXFLAGS) -c -o $@ $< -MMD -MF $(BUILD_DIR)/dep/$*.d
 
 ## Static Library rule
 %/lib/$(MCL_SLIB):
-	$(ECHO) echo Linking Static Library: $@
+	$(ECHO) Linking Static Library: $@
 	$(VERB) mkdir -p $(dir $@)
 	$(VERB) $(AR) -rcs $@ $^
 
 ## Shared Library rule
-$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE):
-	$(ECHO) echo Linking Shared Library: $@
+$(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE)\
+ $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR)\
+ $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB):
+	$(ECHO) Linking Shared Library: $@
 	$(VERB) mkdir -p $(dir $@)
-	$(VERB) $(CXX) -o $@ -shared -Wl,-soname,$(MCL_DLIB).$(SOMAJOR) $^ $(MCL_LDFLAGS)
+	$(VERB) $(CXX) $(MCL_LDFLAGS) $(LDFLAGS) -o $@ -shared -Wl,-soname,$(MCL_DLIB).$(SOMAJOR) $^
+	$(VERB) ln -sf $(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR)
+	$(VERB) ln -sf $(MCL_DLIB).$(SOMAJOR) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB)
 
 install:	install-headers install-lib
 
@@ -144,6 +146,17 @@ install-lib: $(BUILD_DIR)/release/lib/$(MCL_SLIB) $(BUILD_DIR)/dynamic/lib/$(MCL
 	ln -sf $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE) $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR)
 	ln -sf $(DESTDIR)$(libdir)/$(MCL_DLIB).$(SOMAJOR) $(DESTDIR)$(libdir)/$(MCL_DLIB)
 	$(INSTALL) -m 644 $(BUILD_DIR)/release/lib/$(MCL_SLIB) $(DESTDIR)$(libdir)
+
+clean:
+	rm -f $(foreach t, release debug profile dynamic, $(foreach o, $(SRCS:.cc=.o), $(BUILD_DIR)/$t/$o)) \
+	  $(foreach d, $(SRCS:.cc=.d), $(BUILD_DIR)/dep/$d) \
+	  $(foreach t, release debug profile, $(BUILD_DIR)/$t/lib/$(MCL_SLIB)) \
+	  $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE)\
+	  $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR)\
+	  $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB)
+
+distclean:	clean
+	rm -f config.mk
 
 ## Include generated dependencies
 ## NOTE: dependencies are assumed to be the same in all build modes at the moment!
