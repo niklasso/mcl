@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/core/Solver.h"
 #include "minisat/simp/SimpSolver.h"
 #include "mcl/Circ.h"
+#include "mcl/CircPrelude.h"
 #include "mcl/Clausify.h"
 #include "mcl/DagShrink.h"
 

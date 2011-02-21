@@ -70,7 +70,6 @@ class DagShrinker
 
 inline const Circ&      DagShrinker::result()             { return target; }
 inline const GMap<Sig>& DagShrinker::resultMap()          { return m; }
-inline void             DagShrinker::copyResult(Circ& out){ GMap<Sig> dummy; out.clear(); copyCirc(target, out, dummy); }
 
 };
 

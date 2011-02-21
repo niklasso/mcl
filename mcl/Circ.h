@@ -55,10 +55,6 @@ class Circ
 
     Gate                tmp_gate;
 
-    GSet                tmp_set;
-    vec<Sig>            tmp_stack;
-    GMap<int>           tmp_fanouts;
-    
     // Private methods:
     //
     unsigned int allocId     ();
@@ -118,15 +114,6 @@ class Circ
     Sig rchild(Gate g) const;
     Sig lchild(Sig x)  const;
     Sig rchild(Sig x)  const;
-
-    // Pattern matching functions:
-    bool matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z);
-    bool matchMux (Gate g, Sig& x, Sig& y, Sig& z);
-    bool matchXor (Gate g, Sig& x, Sig& y);
-    bool matchXors(Gate g, vec<Sig>& xs);
-    void matchAnds(Gate g, vec<Sig>& xs, bool match_muxes = false);
-    void matchTwoLevel
-                  (Gate g, vec<vec<Sig> >& xss, bool match_muxes = false);
 
     // Lookup whether different different patterns already exists somewhere:
     Sig tryAnd     (Sig x, Sig y);
@@ -234,21 +221,6 @@ class Flops {
 
 // FIXME: clean up this utility section. Maybe move to a separate "Circuit Prelude" source file?
 
-// Given certain values for inputs, calculate the values of all gates in the cone of influence
-// of a signal:
-bool evaluate(const Circ& c, Sig x, GMap<lbool>& values);
-
-void bottomUpOrder(const Circ& c, Gate g, GSet& gset);
-void bottomUpOrder(const Circ& c, Sig  x, GSet& gset);
-void bottomUpOrder(const Circ& c, const vec<Gate>& gs, GSet& gset);
-void bottomUpOrder(const Circ& c, const vec<Sig>&  xs, GSet& gset);
-void bottomUpOrder(const Circ& c, const vec<Gate>& latches, const GMap<Sig>& latch_defs, GSet& gset);
-
-Sig  copyGate(const Circ& src, Circ& dst, Gate g,      GMap<Sig>& copy_map);
-Sig  copySig (const Circ& src, Circ& dst, Sig  x,      GMap<Sig>& copy_map);
-void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
-void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
-
 // FIXME: Move to CircTypes.
 typedef vec<vec<Sig> > Eqs;
 
@@ -256,8 +228,6 @@ void copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Si
 void normalizeEqs(Eqs& eqs);
 void removeTrivialEqs(Eqs& eqs);
 void makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m);
-
-void circInfo(      Circ& c, Gate g, GSet& reachable, int& n_ands, int& n_xors, int& n_muxes, int& tot_ands);
 
 static inline
 void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
@@ -309,44 +279,6 @@ void map(const GMap<Sig>& m, GMap<Sig>& tm){
             *it = sig_Undef;
 }
 
-#if 0
-// NOTE: this version of map does not work when there is some key in 'tm' that does not exists in
-// 'm'. It would be resonable for the user to provide a default T value, or use T's default
-// constructor, but I'll leave that for later.
-// NOTE: Haskellish type: C -> (Sig A -> Sig B) -> (Sig C -> F (Sig A)) -> (Sig C -> F (Sig B))
-template<class T>
-static inline
-void map(const GMap<Sig>& m, GMap<T>& tm){
-    typename GMap<T>::iterator it;
-    for (it = tm.begin(); it != tm.end(); ++it)
-        map(m, *it);
-}
-#endif
-
-
-#if 0
-// FIXME: needs to be thought through.
-
-// Haskellish type: A -> (Sig A -> Sig B) -> (Sig A -> C) -> (Sig B -> C)
-template<class T>
-static inline
-void comap(const Circ& c, const GMap<Sig>& m, GMap<T>& tm){
-    GMap<T> tmp; tm.copyTo(tmp);
-
-    tm.clear(); // Changes "type" from (Sig A -> Sig C) to (Sig B -> Sig C)
-
-    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
-        if (m[g] == sig_Undef){
-            
-        }else{
-            Sig       from = m[g];
-            const T&  to   = tmp[g];
-            
-            tm.growTo(gate(from)); // Extends map with default T-constructor.
-            tm[gate(from)] = to ^ sign(from);
-        }
-}
-#endif
 
 //=================================================================================================
 // Implementation of inline methods:
@@ -365,14 +297,6 @@ inline unsigned int Circ::allocId()
 inline GateType Circ::idType(unsigned int id) const { 
     return id == 0 ? gtype_Const : gates[mkGate(id, gtype_And)].x == sig_Undef ? gtype_Inp : gtype_And; }
 inline Gate     Circ::gateFromId(unsigned int id) const { return mkGate(id, idType(id)); }
-
-inline bool Circ::matchMuxParts(Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return Minisat::matchMuxParts(*this, g, h, x, y, z); }
-inline bool Circ::matchMux (Gate g, Sig& x, Sig& y, Sig& z) { return Minisat::matchMux(*this, g, x, y, z); }
-inline bool Circ::matchXor (Gate g, Sig& x, Sig& y) { return Minisat::matchXor(*this, g, x, y); }
-inline bool Circ::matchXors(Gate g, vec<Sig>& xs) { return Minisat::matchXors(*this, g, tmp_stack, xs); }
-inline void Circ::matchAnds(Gate g, vec<Sig>& xs, bool match_muxes) { Minisat::matchAnds(*this, g, tmp_set, tmp_stack, tmp_fanouts, xs, match_muxes); }
-inline void Circ::matchTwoLevel(Gate g, vec<vec<Sig> >& xss, bool match_muxes) { 
-    Minisat::matchTwoLevel(*this, g, tmp_set, tmp_stack, tmp_fanouts, xss, match_muxes); }
 
 //=================================================================================================
 // Implementation of strash-functions:

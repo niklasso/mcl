@@ -40,7 +40,7 @@ static void writeSmvWithOp(FILE* f, const char* op, vec<Sig>& xs)
     }
 }
 
-static void recursiveWriteSmv(FILE* f, Circ& c, Gate g, GSet& reached, bool tip_mode, bool structured)
+static void recursiveWriteSmv(FILE* f, Circ& c, CircMatcher& cm, Gate g, GSet& reached, bool tip_mode, bool structured)
 {
     if (reached.has(g)) return;
     reached.insert(g);
@@ -52,17 +52,17 @@ static void recursiveWriteSmv(FILE* f, Circ& c, Gate g, GSet& reached, bool tip_
         if (!structured){
             x = c.lchild(g);
             y = c.rchild(g);
-            recursiveWriteSmv(f, c, gate(x), reached, tip_mode, structured);
-            recursiveWriteSmv(f, c, gate(y), reached, tip_mode, structured);
+            recursiveWriteSmv(f, c, cm, gate(x), reached, tip_mode, structured);
+            recursiveWriteSmv(f, c, cm, gate(y), reached, tip_mode, structured);
             writeSmvSig(f, mkSig(g));
             fprintf(f, " := ");
             writeSmvSig(f, x);
             fprintf(f, " & ");
             writeSmvSig(f, y);
             fprintf(f, ";\n");
-        }else if ( tip_mode && c.matchXor(g, x, y)){
-            recursiveWriteSmv(f, c, gate(x), reached, tip_mode, structured);
-            recursiveWriteSmv(f, c, gate(y), reached, tip_mode, structured);
+        }else if ( tip_mode && cm.matchXor(c, g, x, y)){
+            recursiveWriteSmv(f, c, cm, gate(x), reached, tip_mode, structured);
+            recursiveWriteSmv(f, c, cm, gate(y), reached, tip_mode, structured);
             writeSmvSig(f, mkSig(g));
             fprintf(f, " := ");
             //fprintf(f, "x%d := ", index(g));
@@ -70,18 +70,18 @@ static void recursiveWriteSmv(FILE* f, Circ& c, Gate g, GSet& reached, bool tip_
             fprintf(f, tip_mode ? " <-> " : " ^ ");
             writeSmvSig(f, tip_mode ? ~y : y);
             fprintf(f, ";\n");
-        }else if (!tip_mode && c.matchXors(g, xs)){
+        }else if (!tip_mode && cm.matchXors(c, g, xs)){
             for (int i = 0; i < xs.size(); i++)
-                recursiveWriteSmv(f, c, gate(xs[i]), reached, tip_mode, structured);
+                recursiveWriteSmv(f, c, cm, gate(xs[i]), reached, tip_mode, structured);
             writeSmvSig(f, mkSig(g));
             fprintf(f, " := ");
             //fprintf(f, "x%d := ", index(g));
             writeSmvWithOp(f, "^", xs);
             fprintf(f, ";\n");
-        }else if (c.matchMux(g, x, y, z)){
-            recursiveWriteSmv(f, c, gate(x), reached, tip_mode, structured);
-            recursiveWriteSmv(f, c, gate(y), reached, tip_mode, structured);
-            recursiveWriteSmv(f, c, gate(z), reached, tip_mode, structured);
+        }else if (cm.matchMux(c, g, x, y, z)){
+            recursiveWriteSmv(f, c, cm, gate(x), reached, tip_mode, structured);
+            recursiveWriteSmv(f, c, cm, gate(y), reached, tip_mode, structured);
+            recursiveWriteSmv(f, c, cm, gate(z), reached, tip_mode, structured);
             writeSmvSig(f, mkSig(g));
             fprintf(f, " := ");
             //fprintf(f, "x%d := ", index(g));
@@ -104,9 +104,9 @@ static void recursiveWriteSmv(FILE* f, Circ& c, Gate g, GSet& reached, bool tip_
                 fprintf(f, ";\n");
             }
         }else{
-            c.matchAnds(g, xs);
+            cm.matchAnds(c, g, xs);
             for (int i = 0; i < xs.size(); i++)
-                recursiveWriteSmv(f, c, gate(xs[i]), reached, tip_mode, structured);
+                recursiveWriteSmv(f, c, cm, gate(xs[i]), reached, tip_mode, structured);
 
             writeSmvSig(f, mkSig(g));
             fprintf(f, " := ");
@@ -153,14 +153,15 @@ void Minisat::writeSmv(const char* filename, Circ& c, const Box& b, const Flops&
     }
 
     fprintf(f, "DEFINE\n");
-    GSet     reached;
-    vec<Sig> bads;
+    GSet        reached;
+    vec<Sig>    bads;
+    CircMatcher cm;
     for (int i = 0; i < b.outs.size(); i++){
         bads.push(~b.outs[i]);
-        recursiveWriteSmv(f, c, gate(b.outs[i]), reached, tip_mode, structured);
+        recursiveWriteSmv(f, c, cm, gate(b.outs[i]), reached, tip_mode, structured);
     }
     for (int i = 0; i < flp.size(); i++)
-        recursiveWriteSmv(f, c, gate(flp.def(flp[i])), reached, tip_mode, structured);
+        recursiveWriteSmv(f, c, cm, gate(flp.def(flp[i])), reached, tip_mode, structured);
 
     fprintf(f, "__prop := ");
     writeSmvWithOp(f, "|", bads);

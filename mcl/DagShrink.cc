@@ -20,11 +20,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Sort.h"
 #include "minisat/utils/System.h"
 #include "mcl/DagShrink.h"
+#include "mcl/CircPrelude.h"
 
 using namespace Minisat;
 
 #define MATCH_MUXANDXOR
-//#define MATCH_TWOLEVEL
 
 //=================================================================================================
 // Statistics:
@@ -221,7 +221,7 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
                 if (xs[j] == sig_Undef || !sign(xs[j]) || type(xs[j]) != gtype_And || in.nFanouts(gate(xs[j])) != 0) continue;
                 
                 Sig x, y, z;
-                if (in.matchMuxParts(gate(xs[i]), gate(xs[j]), x, y, z)){
+                if (matchMuxParts(in, gate(xs[i]), gate(xs[j]), x, y, z)){
                     // int gates_before = in.nGates();
                     xs.push(in.mkMux(x, y, z));
                     // assert(gates_before + 1 == in.nGates());
@@ -354,138 +354,6 @@ static inline void printSigs(const vec<Sig>& xs)
 }
 
 
-
-
-#ifdef MATCH_TWOLEVEL
-static Sig rebuildTwoLevelEven(Circ& in, const vec<vec<Sig> >& xss, double& rnd_seed)
-{
-    vec<Sig> top;
-    vec<Sig> inv_clause;
-
-    for (int i = 0; i < xss.size(); i++){
-        xss[i].copyTo(inv_clause);
-        for (int j = 0; j < inv_clause.size(); j++)
-            inv_clause[j] = ~inv_clause[j];
-        top.push(~rebuildAnds(in, inv_clause, rnd_seed));
-    }
-
-    return rebuildAnds(in, top, rnd_seed);
-}
-
-
-static bool convertDNFtoCNF(const vec<vec<Sig> >& dnf, vec<vec<Sig> >& cnf)
-{
-    static const int cut_off = 100;
-    cnf.push();
-
-    vec<vec<Sig> > tmp;
-    // fprintf(stderr, " >>> Converting CNF to DNF:\n");
-    // for (int i = 0; i < dnf.size(); i++){
-    //     fprintf(stderr, " --- ");
-    //     printSigs(dnf[i]);
-    //     fprintf(stderr, "\n");
-    // }
-
-
-    for (int i = 0; i < dnf.size(); i++){
-        // Expand current cnf with the product in dnf[i]:
-
-        tmp.clear();
-        for (int j = 0; j < cnf.size(); j++)
-            for (int k = 0; k < dnf[i].size(); k++){
-                Sig x = dnf[i][k];
-
-                if (find(cnf[j], x)){
-                    tmp.push();
-                    cnf[j].copyTo(tmp.last());
-                }else if (!find(cnf[j], ~x)){
-                    tmp.push();
-                    cnf[j].copyTo(tmp.last());
-                    tmp.last().push(x);
-                }
-                
-            }
-        tmp.moveTo(cnf);
-
-        if (cnf.size() > cut_off)
-            return false;
-    }
-
-    normalizeTwoLevel(cnf);
-    return true;
-}
-
-
-static Sig rebuildTwoLevelOdd(Circ& in, const vec<vec<Sig> >& xss, double& rnd_seed)
-{
-    vec<vec<Sig> > tmp_dnf;
-
-    for (int i = 0; i < xss.size(); i++){
-        tmp_dnf.push();
-        for (int j = 0; j < xss[i].size(); j++)
-            tmp_dnf.last().push(~xss[i][j]);
-    }
-
-    vec<vec<Sig> > new_cnf;
-
-    if (convertDNFtoCNF(tmp_dnf, new_cnf))
-        return ~rebuildTwoLevelEven(in, new_cnf, rnd_seed);
-    else
-        return sig_Undef;
-}
-
-
-static Sig rebuildTwoLevel(Circ& in, vec<vec<Sig> >& xss, double& rnd_seed)
-{
-    double tmp_seed;
-
-    if (xss.size() == 1 && xss[0].size() == 0){
-        // fprintf(stderr, "matched a constant false two-level.\n");
-        return sig_False;
-    }
-    else if (xss.size() == 0){
-        // fprintf(stderr, "matched a constant true two-level.\n");
-        return  sig_True;
-    }
-
-    in.push();
-
-    dash_stats.push();
-
-    tmp_seed = rnd_seed;
-    Sig even = rebuildTwoLevelEven(in, xss, tmp_seed);
-    uint32_t gates_even = in.nGates();
-
-    if (xss.size() > 8){
-        //if (true){
-        in.commit();
-        dash_stats.commit();
-
-        return even;
-    }else{
-        in.pop();
-        in.push();
-        dash_stats.pop();
-        dash_stats.push();
-
-        tmp_seed = rnd_seed;
-        Sig odd = rebuildTwoLevelOdd(in, xss, tmp_seed);
-        uint32_t gates_odd = (odd != sig_Undef) ? in.nGates() : UINT32_MAX;
-        
-        if (gates_odd < gates_even){
-            in.commit();
-            dash_stats.commit();
-            // printf("<<< GOT HERE...\n");
-            return odd;
-        }else{
-            in.pop();
-            dash_stats.pop();
-            return rebuildTwoLevelEven(in, xss, rnd_seed);
-        }
-    }
-}
-#endif
-
 //=================================================================================================
 // Main dagshrink functions:
 //
@@ -500,22 +368,6 @@ void dagShrink(const Circ& in, Circ& out, vec<Sig>&xs, CircMatcher& cm, GMap<Sig
         xs[i] = a ^ sign(xs[i]);
     }
 }
-#ifdef MATCH_TWOLEVEL
-static 
-void dagShrink(const Circ& in, Circ& out, vec<vec<Sig> >& xss, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
-{
-    randomShuffle(rnd_seed, xss);
-    for (int i = 0; i < xss.size(); i++){
-        randomShuffle(rnd_seed, xss[i]);
-        for (int j = 0; j < xss[i].size(); j++){
-            Sig a = dagShrink(in, out, gate(xss[i][j]), cm, map, rnd_seed);
-            assert(a == map[gate(xss[i][j])]);
-            xss[i][j] = a ^ sign(xss[i][j]);
-        }
-    }
-    normalizeTwoLevel(xss);
-}
-#endif
 
 Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
 {
@@ -547,7 +399,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
     }else 
 #endif
     
-#ifndef MATCH_TWOLEVEL
     if (type(g) == gtype_And){
         cm.matchAnds(in, g, xs);
 
@@ -556,27 +407,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
 
         dash_stats.current().nof_and_nodes++; dash_stats.current().total_and_size += xs.size();
         result = rebuildAnds(out, xs, rnd_seed);
-#else
-    if (type(g) == gtype_And){
-        //if (type(g) == gtype_And){
-        vec<vec<Sig> > xss;
-        cm.matchTwoLevel(in, g, xss, false);
-
-        ::dagShrink(in, out, xss, cm, map, rnd_seed);
-
-        for (int i = 0; i < xss.size(); i++)
-            if (xss[i].size() > 1){
-                dash_stats.current().nof_and_nodes++;
-                dash_stats.current().total_and_size += xss[i].size();
-            }
-        dash_stats.current().nof_and_nodes++;
-        dash_stats.current().total_and_size += xss.size();
-
-        // if (dash_stats.current().node_cnt++ % 100 == 0)
-        //     fprintf(stderr, "PROGRESS: %d\r", dash_stats.current().node_cnt);
-                
-        result = rebuildTwoLevel(out, xss, rnd_seed);
-#endif
 
     }else {
         //fprintf(stderr, "Matched an input\n");
@@ -587,31 +417,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
 
     return map[g] = result;
 }
-
-
-#if 0
-static void findDefs(AigerCirc& c)
-{
-    vec<Sig> xs;
-    for (int i = 0; i < c.outputs.size(); i++)
-        if (!sign(c.outputs[i])){
-            xs.clear();
-            c.circ.matchAnds(gate(c.outputs[i]), xs);
-            fprintf(stderr, " >>> OUTPUT %d is a conjunction of size %d\n", i, xs.size());
-
-            Sig x, y;
-            int n_defs = 0;
-            int n_xors = 0;
-            for (int j = 0; j < xs.size(); j++)
-                //if (c.circ.matchXor(gate(xs[i]), x, y) && (type(x) == gtype_Inp || type(y) == gtype_Inp))
-                if (c.circ.matchXor(gate(xs[i]), x, y) && (n_xors++, (type(x) == gtype_Inp || type(y) == gtype_Inp)))
-                    n_defs++;
-
-            fprintf(stderr, " >>> OUTPUT %d contains %d definition-type XORS (%d total)\n", i, n_defs, n_xors);
-        }
-        
-}
-#endif
 
 
 void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy)
@@ -699,51 +504,14 @@ void Minisat::dagShrinkIter(Circ& c, Box& b, Flops& flp, double frac)
 // Utility functions:
 //
 
-// NOTE: this appears to be buggy ...
-static inline void splitDisj(Circ& c, Sig x, SSet& all_outputs)
-{
-    // if (sign(x) && type(x) == gtype_And){
-    if (false){
-        // printf(" >>> got here ... \n");
-
-        // Handle disjunction:
-        //
-        Sig l = c.lchild(x);
-        Sig r = c.rchild(x);
-
-        if (!sign(r) || type(r) != gtype_And){ Sig tmp = l; l = r; r = tmp; }
-    
-        if (!sign(r) || type(r) != gtype_And)
-            all_outputs.insert(x);
-        else{
-            vec<Sig> xs;
-            if (sign(l) && type(l) == gtype_And){
-                int size_l = (c.matchAnds(gate(l), xs, true), xs.size());
-                int size_r = (c.matchAnds(gate(r), xs, true), xs.size());
-                
-                if (size_l > size_r){ Sig tmp = l; l = r; r = tmp; }
-            }
-        
-            // x is signed, r is signed (i.e x == ~l or ~r):
-            assert(sign(r));
-            assert(type(r) == gtype_And);
-            c.matchAnds(gate(r), xs, true);
-
-            // printf(" >>> DISTRIBUTED DISJ. OVER CONJ. OF SIZE %d\n", xs.size());
-            for (int j = 0; j < xs.size(); j++)
-                all_outputs.insert(c.mkOr(~l, xs[j]));
-        }
-    }else
-        all_outputs.insert(x);
-}
-
 // TODO: this should be re-evaluated/tested and perhaps reimplemented.
 // FIXME: isn't there a normalization step to remove duplicates and check inconsistenies missing at the end?
 // Breaking down big output conjunctions, and merging equivalent output nodes:
 void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
 {
-    SSet     all_outputs;
-    vec<Sig> xs;
+    SSet        all_outputs;
+    vec<Sig>    xs;
+    CircMatcher cm;
 
     for (;;){
         // bool again = false;
@@ -756,7 +524,7 @@ void Minisat::splitOutputs(Circ& c, Box& b, Flops& flp)
                 if (!sign(x)){
                     // Handle conjunction:
                     //
-                    c.matchAnds(gate(x), xs, true);
+                    cm.matchAnds(c, gate(x), xs, true);
 
                     // printf(" >>> SPLIT OUTPUT [%d] %s%d into %d parts.\n", i, sign(x)?"-":"", index(gate(x)), xs.size());
                     
@@ -905,3 +673,6 @@ void  DagShrinker::printStatsFooter() const
 {
     printf("===============================================================================\n");
 }
+
+void  DagShrinker::copyResult(Circ& out){ 
+    GMap<Sig> dummy; out.clear(); copyCirc(target, out, dummy); }

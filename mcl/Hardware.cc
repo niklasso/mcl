@@ -24,6 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/simp/SimpSolver.h"
 #include "mcl/Hardware.h"
 #include "mcl/Clausify.h"
+#include "mcl/CircPrelude.h"
 
 using namespace Minisat;
 
