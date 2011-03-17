@@ -1,5 +1,5 @@
-/*******************************************************************************************[Smv.h]
-Copyright (c) 2008, Niklas Sorensson
+/****************************************************************************************[Flops.cc]
+Copyright (c) 2007-2011, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -17,23 +17,27 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Smv_h
-#define Minisat_Smv_h
-
-#include "mcl/Circ.h"
 #include "mcl/Flops.h"
 
-namespace Minisat {
+using namespace Minisat;
 
-//=================================================================================================
-// Functions for parsing and printing circuits in the loosely defined FLAT-SMV format.
 
-void readSmv (const char* filename, Circ& c,       Box& b,       Flops& flp);
-void writeSmv(const char* filename, Circ& c, const Box& b, const Flops& flp,
-              bool structured = true);
+void Flops::define(Gate flop, Sig next, Sig init){
+    assert(type(flop) == gtype_Inp); // 'flop' must be an input.
+    assert(!isFlop(flop));           // 'flop' may only be defined once.
+    assert(flop != gate_Undef);
+    assert(next != sig_Undef);
+    assert(init != sig_Undef);
 
-//=================================================================================================
+    static const FlopDef no_def   = { sig_Undef, sig_Undef };
+    FlopDef              new_def  = { next, init };
+    def_map.growTo(flop, no_def);
+    def_map[flop] = new_def;
 
-};
+    flops.push(flop);
+}
 
-#endif
+
+void Flops::moveTo    (Flops& to)       { def_map.moveTo(to.def_map); flops.moveTo(to.flops); }
+void Flops::copyTo    (Flops& to)       { def_map.copyTo(to.def_map); flops.copyTo(to.flops); }
+void Flops::clear     (bool dealloc)    { def_map.clear(dealloc); flops.clear(dealloc); }

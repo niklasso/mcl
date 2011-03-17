@@ -1,5 +1,5 @@
-/*******************************************************************************************[Smv.h]
-Copyright (c) 2008, Niklas Sorensson
+/***************************************************************************************[SeqCirc.h]
+Copyright (c) 2011, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -17,8 +17,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Smv_h
-#define Minisat_Smv_h
+#ifndef Minisat_SeqCirc_h
+#define Minisat_SeqCirc_h
 
 #include "mcl/Circ.h"
 #include "mcl/Flops.h"
@@ -26,11 +26,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 namespace Minisat {
 
 //=================================================================================================
-// Functions for parsing and printing circuits in the loosely defined FLAT-SMV format.
+// SeqCirc -- a class for representing sequential circuits.
 
-void readSmv (const char* filename, Circ& c,       Box& b,       Flops& flp);
-void writeSmv(const char* filename, Circ& c, const Box& b, const Flops& flp,
-              bool structured = true);
+struct SeqCirc
+{
+    Circ  main;
+    Circ  init;
+    Flops flps;
+};
 
 //=================================================================================================
 

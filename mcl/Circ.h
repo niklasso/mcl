@@ -140,6 +140,9 @@ struct Box {
     void copyTo(Box& to){ inps.copyTo(to.inps); outs.copyTo(to.outs); }
 };
 
+// NOTE: This is about to be deleted ...
+#if 0
+
 //=================================================================================================
 // Flops -- a class for representing the sequential behaviour of a circuit:
 
@@ -215,6 +218,21 @@ class Flops {
 
 };
 
+static inline
+void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
+
+static inline void extractSigs(const Flops& flps, vec<Sig>& xs){
+     for (int i = 0; i < flps.size(); i++){
+         xs.push(mkSig(flps[i]));
+         xs.push(flps.def(flps[i]));
+     } }
+
+static inline void mapInps(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapInps(m, tmp); tmp.moveTo(flps); }
+static inline void mapOuts(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapOuts(m, tmp); tmp.moveTo(flps); }
+static inline void map    (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map(m, tmp);     tmp.moveTo(flps); }
+
+
+#endif
 
 //=================================================================================================
 // Circ utility functions:
@@ -229,9 +247,6 @@ void normalizeEqs(Eqs& eqs);
 void removeTrivialEqs(Eqs& eqs);
 void makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m);
 
-static inline
-void copy    (const Flops& from, Flops& to){ from.copyTo(to); }
-
 // Extract signals contained within some data-structure:
 static inline void extractSigs(Sig x,  vec<Sig>& xs){ xs.push(x); }
 static inline void extractSigs(Gate g, vec<Sig>& xs){ xs.push(mkSig(g)); }
@@ -240,20 +255,10 @@ static inline void extractSigs(const vec<T>& ys, vec<Sig>& xs){
     for (int i = 0; i < ys.size(); i++)
         extractSigs(ys[i], xs); }
 static inline void extractSigs(const Box& b, vec<Sig>& xs){ extractSigs(b.inps, xs); extractSigs(b.outs, xs); }
-static inline void extractSigs(const Flops& flps, vec<Sig>& xs){
-     for (int i = 0; i < flps.size(); i++){
-         xs.push(mkSig(flps[i]));
-         xs.push(flps.def(flps[i]));
-     } }
-
 //=================================================================================================
 // Map functions:
 //
 
-
-static inline void mapInps(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapInps(m, tmp); tmp.moveTo(flps); }
-static inline void mapOuts(const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.mapOuts(m, tmp); tmp.moveTo(flps); }
-static inline void map    (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map(m, tmp);     tmp.moveTo(flps); }
 
 static inline void map(const GMap<Sig>& m, Gate& g)    { if (g != gate_Undef) g = gate(m[g]); } // Use with care!
 static inline void map(const GMap<Sig>& m, Sig&  x)    { if (x != sig_Undef) x = m[gate(x)] ^ sign(x); }

@@ -133,7 +133,7 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
     // Map flops:
     for (int i = 0; i < aiger_latch_defs.size(); i++){
         Sig x = aigToSig(id2sig, aiger_latch_defs[i]);
-        flp.defineFlop(latch_gates[i], x);
+        flp.define(latch_gates[i], x, sig_False);
     }
 
     gzclose(f);
@@ -176,7 +176,13 @@ void Minisat::writeAiger(const char* filename, const Circ& c, const Box& b, cons
     // Build set of all sink-nodes:
     vec<Gate> sinks;
     for (int i = 0; i < b.outs.size(); i++) sinks.push(gate(b.outs[i]));
-    for (int i = 0; i < flp   .size(); i++) sinks.push(gate(flp.def(flp[i])));
+    for (int i = 0; i < flp   .size(); i++) sinks.push(gate(flp.next(flp[i])));
+#ifndef NDEBUG
+    // AIGER only supports zero-initialized flops, and there is no conversion in built into this
+    // function. TODO: make this check always-on somehow.
+    for (int i = 0; i < flp   .size(); i++)
+        assert(flp.init(flp[i]) == sig_False);
+#endif
     bottomUpOrder(c, sinks, uporder);
 
     unsigned int       n_gates = uporder.size() - n_inputs - n_flops;
@@ -194,7 +200,7 @@ void Minisat::writeAiger(const char* filename, const Circ& c, const Box& b, cons
 
     // Write latch-defs:
     for (int i = 0; i < flp.size(); i++)
-        fprintf(f, "%u\n", sigToAig(gate2id, flp.def(flp[i])));
+        fprintf(f, "%u\n", sigToAig(gate2id, flp.next(flp[i])));
 
     // Write outputs:
     for (int i = 0; i < b.outs.size(); i++)

@@ -27,89 +27,6 @@ using namespace Minisat;
 #define MATCH_MUXANDXOR
 
 //=================================================================================================
-// Statistics:
-//
-
-struct DagShrinkStatsFrame
-{
-    int    nof_muxes_found;
-    int    nof_shared_and_nodes;
-    int    nof_shared_xor_nodes;
-    int    nof_shared_mux_nodes;
-    int    total_nodes_before;
-    int    total_nodes_after;
-    int    nof_mux_nodes;
-    int    nof_xor_nodes;
-    int    nof_and_nodes;
-    int    total_and_size;
-    int    total_xor_size;
-    int    node_cnt;
-    double time_before;
-
-    void   clear();
-    void   print();
-};
-
-
-class DagShrinkStats
-{
-    vec<DagShrinkStatsFrame> stats_stack;
-public:
-    DagShrinkStats() { stats_stack.push(); stats_stack.last().clear(); }
-
-    void clear();
-    void print();
-    void push();
-    void pop();
-    void commit();
-
-    DagShrinkStatsFrame& current();
-};
-
-
-void DagShrinkStatsFrame::clear()
-{
-    nof_muxes_found      = 0;
-    nof_shared_and_nodes = 0;
-    nof_shared_xor_nodes = 0;
-    nof_shared_mux_nodes = 0;
-    total_nodes_before   = 0;
-    total_nodes_after    = 0;
-    nof_mux_nodes        = 0;
-    nof_xor_nodes        = 0;
-    nof_and_nodes        = 0;
-    total_and_size       = 0;
-    total_xor_size       = 0;
-    node_cnt             = 0;
-    time_before          = cpuTime();
-}
-
-
-void DagShrinkStatsFrame::print()
-{
-    // fprintf(stderr, "| xxxxxxxxxx | xxxxxxxx xxxxxxxx xxxxxxxx | xxxxxx xxxxxx xxxxxx | xxxxxxxxxx |\n");
-    printf("| %10d | %8d %8d %8d | %6d %6d %6d | %10d |\n", total_nodes_after, nof_and_nodes, nof_xor_nodes, nof_mux_nodes, nof_shared_and_nodes, nof_shared_xor_nodes, nof_shared_mux_nodes, nof_muxes_found);
-}
-
-
-DagShrinkStatsFrame& 
-     DagShrinkStats::current() { return stats_stack.last(); }
-void DagShrinkStats::clear  () { stats_stack.last().clear(); }
-void DagShrinkStats::print  () { stats_stack.last().print(); }
-void DagShrinkStats::push   () { stats_stack.push(stats_stack.last()); }
-void DagShrinkStats::pop    () { stats_stack.pop(); }
-void DagShrinkStats::commit () {
-    assert(stats_stack.size() > 1);
-    DagShrinkStatsFrame sf = stats_stack.last();
-    stats_stack.pop(); 
-    stats_stack.last() = sf;
-}
-
-
-static DagShrinkStats dash_stats;
-
-
-//=================================================================================================
 // Basic helpers (could be moved to some more generic location):
 //
 
@@ -264,13 +181,6 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
     // if (reused_nodes > 0 || found_muxes > 0)
     //     fprintf(stderr, "rebuild-and: reused %d and nodes and found %d muxes\n", reused_nodes, found_muxes);
 
-    if (result != sig_True){
-        in.commit();
-        dash_stats.current().nof_shared_and_nodes += reused_nodes;
-        dash_stats.current().nof_muxes_found += found_muxes;
-    }else
-        in.pop();
-
     return result;
 }
 
@@ -326,7 +236,6 @@ static Sig rebuildXors(Circ& in, vec<Sig>& xs, double& rnd_seed)
 
     // if (reused_nodes > 0)
     //     fprintf(stderr, "rebuild-xor: reused %d nodes\n", reused_nodes);
-    dash_stats.current().nof_shared_xor_nodes += reused_nodes;
 
     return result;
 }
@@ -336,11 +245,6 @@ static Sig rebuildMux(Circ& in, Sig x, Sig y, Sig z)
 {
     int a = in.costMuxEven(x, y, z);
     int b = in.costMuxOdd (x, y, z);
-    
-    int best = b < a ? b : a;
-
-    if (best < 3) dash_stats.current().nof_shared_mux_nodes += (3 - best);
-
     return b < a ? in.mkMuxOdd(x, y, z) : in.mkMuxEven(x, y, z);
 }
 
@@ -383,8 +287,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
     if (cm.matchXors(in, g, xs)){
         ::dagShrink(in, out, xs, cm, map, rnd_seed);
         normalizeXors(xs); // New redundancies may arise after recursive copying/shrinking.
-
-        dash_stats.current().nof_xor_nodes++; dash_stats.current().total_xor_size += xs.size();
         result = rebuildXors(out, xs, rnd_seed);
 
     }else if (cm.matchMux(in, g, x, y, z)){
@@ -394,8 +296,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
         y = dagShrink(in, out, gate(y), cm, map, rnd_seed) ^ sign(y);
         z = dagShrink(in, out, gate(z), cm, map, rnd_seed) ^ sign(z);
         result = rebuildMux(out, x, y, z);
-
-        dash_stats.current().nof_mux_nodes++;
     }else 
 #endif
     
@@ -404,8 +304,6 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
 
         ::dagShrink(in, out, xs, cm, map, rnd_seed);
         // normalizeAnds(xs); // New redundancies may arise after recursive copying/shrinking.
-
-        dash_stats.current().nof_and_nodes++; dash_stats.current().total_and_size += xs.size();
         result = rebuildAnds(out, xs, rnd_seed);
 
     }else {
@@ -419,6 +317,8 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
 }
 
 
+// NOTE: about to be deleted ...
+#if 0
 void Minisat::dagShrink(Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy)
 {
     Circ      tmp_circ;
@@ -676,3 +576,5 @@ void  DagShrinker::printStatsFooter() const
 
 void  DagShrinker::copyResult(Circ& out){ 
     GMap<Sig> dummy; out.clear(); copyCirc(target, out, dummy); }
+
+#endif

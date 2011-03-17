@@ -20,6 +20,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_ReTime_h
 #define Minisat_ReTime_h
 
+// NOTE: this needs to be re-written from scratch!
+#if 0
 #include "mcl/Circ.h"
 
 namespace Minisat {
@@ -31,6 +33,8 @@ void fwdReTime(Circ& c, Box& b, Flops& flp);
 void bwdReTime(Circ& c, Box& b, Flops& flp);
 
 //=================================================================================================
+
+#endif
 
 };
 

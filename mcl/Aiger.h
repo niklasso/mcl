@@ -21,20 +21,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Minisat_Aiger_h
 
 #include "mcl/Circ.h"
+#include "mcl/Flops.h"
 
 namespace Minisat {
 
 //=================================================================================================
 // Functions for parsing and printing circuits in the AIGER format. See <http://fmv.jku.at/aiger/>
 // for specification of this format as well as supporting tools and example circuits.
-
-struct AigerCirc {
-    Circ       circ;
-    vec<Gate>  inputs;
-    vec<Gate>  latches;
-    vec<Sig>   outputs;
-    GMap<Sig>  latch_defs;
-};
 
 void readAiger (const char* filename,       Circ& c,       Box& b,       Flops& flp);
 void writeAiger(const char* filename, const Circ& c, const Box& b, const Flops& flp);

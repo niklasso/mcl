@@ -17,6 +17,9 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+// NOTE: this needs to be re-written from scratch!
+#if 0
+
 #include "mcl/DagShrink.h"
 #include "mcl/ReTime.h"
 
@@ -259,3 +262,5 @@ void Minisat::fwdReTime(Circ& c, Box& b, Flops& flp)
         removeDeadFlops(c, b, flp);
     }
 }
+
+#endif

@@ -1,5 +1,5 @@
 /*************************************************************************************[DagShrink.h]
-Copyright (c) 2008, Niklas Sorensson
+Copyright (c) 2008-2011, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -27,6 +27,8 @@ namespace Minisat {
 
 Sig  dagShrink       (const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& m, double& rnd_seed);
 
+// NOTE: about to be deleted...
+#if 0
 void dagShrink       (Circ& c, Box& b, Flops& flp, double& rnd_seed, bool only_copy = false);
 void dagShrinkIter   (Circ& c, Box& b, Flops& flp, int    n_iters = 5);
 void dagShrinkIter   (Circ& c, Box& b, Flops& flp, double frac);
@@ -70,6 +72,7 @@ class DagShrinker
 
 inline const Circ&      DagShrinker::result()             { return target; }
 inline const GMap<Sig>& DagShrinker::resultMap()          { return m; }
+#endif
 
 };
 

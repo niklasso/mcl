@@ -34,6 +34,8 @@ int  satSweep(Circ& cin, Clausifyer<SimpSolver>& cl, SimpSolver& s, const Eqs& e
 
 void makeUnitClass(const Circ& cin, Eqs& unit);
 
+// NOTE: about to be deleted?
+#if 0
 //=================================================================================================
 // SatSweeper convenience class:
 //
@@ -140,7 +142,7 @@ void SatSweeper<Solver>::sweep()
 
     // printf(" --- SWEEP copied the result to target circuit.\n");
 }
-
+#endif
 
 
 };
