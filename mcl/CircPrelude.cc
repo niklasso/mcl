@@ -155,3 +155,42 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
                 map[g] = dst.mkAnd(ux, uy);
             }
 }
+
+//=================================================================================================
+// This transformation copies the circuit 'src' into 'dst' while inlining the substitutions in
+// 'subst_map'. The substitution map should be defined such that for all gates 'g' in 'src':
+//
+//   1) 'subst_map[g]' is a signal in 'src' which should replace 'g'. If the gate 'g' is to be kept
+//   as it is, it is also ok to set 'subst_map[g]' to sig_Undef
+//
+//   2) If 'subst_map[g]' is different from sig_Undef, then 'subst_map[g]' must be smaller than 'g'
+//   with respect to some circuit topological order.
+//
+// The resulting 'copy_map' gives the location of each gate in the destination circuit.
+// 
+// FIXME: The documentation for this function is only partial. What is left is to describe how "only
+// occurences are substituted, but not the gates themselves."
+void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map)
+{
+    subst_map.growTo(src.lastGate(), sig_Undef);
+    copy_map .growTo(src.lastGate(), sig_Undef);
+
+    copy_map[gate_True] = sig_True;
+    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
+        if (copy_map[g] == sig_Undef)
+            if (type(g) == gtype_Inp)
+                copy_map[g] = dst.mkInp();
+            else {
+                assert(type(g) == gtype_And);
+                
+                Sig orig_x  = src.lchild(g);
+                Sig orig_y  = src.rchild(g);
+                Sig subst_x = subst_map[gate(orig_x)] == sig_Undef ? orig_x : subst_map[gate(orig_x)] ^ sign(orig_x);
+                Sig subst_y = subst_map[gate(orig_y)] == sig_Undef ? orig_y : subst_map[gate(orig_y)] ^ sign(orig_y);
+                Sig copy_x  = copy_map[gate(subst_x)] ^ sign(subst_x);
+                Sig copy_y  = copy_map[gate(subst_y)] ^ sign(subst_y);
+
+                copy_map[g] = dst.mkAnd(copy_x, copy_y);
+            }
+}
+

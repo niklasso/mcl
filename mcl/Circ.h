@@ -242,7 +242,6 @@ static inline void map    (const GMap<Sig>& m, Flops& flps){ Flops tmp; flps.map
 // FIXME: Move to CircTypes.
 typedef vec<vec<Sig> > Eqs;
 
-void copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
 void normalizeEqs(Eqs& eqs);
 void removeTrivialEqs(Eqs& eqs);
 void makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m);
