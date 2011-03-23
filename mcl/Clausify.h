@@ -26,6 +26,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 namespace Minisat {
 
+// TODO: 
+//   -  Remove the 'top_assumed' functionality?
+//   -  Remove the gate counters? They are not used at the moment.
+
 //=================================================================================================
 // An almost naive clausifyer for Circuits:
 
@@ -275,6 +279,16 @@ class Clausifyer
             }
         }
         // fprintf(stderr, " >> (assume) ANDS = %d, XORS = %d, MUXES = %d\n", nof_ands, nof_xors, nof_muxs);
+    }
+
+    void clear(bool dealloc = false)
+    {
+        vmap.clear(dealloc);
+        clausify_mark.clear(dealloc);
+        top_assumed.clear(dealloc);
+        nof_ands = 0;
+        nof_xors = 0;
+        nof_muxs = 0;
     }
 };
 
