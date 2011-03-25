@@ -260,7 +260,15 @@ static inline void extractSigs(const Box& b, vec<Sig>& xs){ extractSigs(b.inps, 
 
 
 static inline void map(const GMap<Sig>& m, Gate& g)    { if (g != gate_Undef) g = gate(m[g]); } // Use with care!
-static inline void map(const GMap<Sig>& m, Sig&  x)    { if (x != sig_Undef) x = m[gate(x)] ^ sign(x); }
+static inline void map(const GMap<Sig>& m, Sig&  x){ 
+    if (x != sig_Undef){
+        Sig y = m[gate(x)];
+        if (y == sig_Undef)
+            x = sig_Undef;
+        else
+            x = y ^ sign(x);
+    }
+}
 static inline void map(const GMap<Sig>& m, Box& b){
     for (int i = 0; i < b.inps.size(); i++){ assert(!sign(m[b.inps[i]])); b.inps[i] = gate(m[b.inps[i]]); }
     for (int i = 0; i < b.outs.size(); i++) b.outs[i] = m[gate(b.outs[i])] ^ sign(b.outs[i]);
