@@ -39,7 +39,10 @@ struct Gate {
     unsigned int x;
     bool operator == (Gate p) const { return x == p.x; }
     bool operator != (Gate p) const { return x != p.x; }
-    bool operator <  (Gate p) const { return x < p.x;  }
+    bool operator <  (Gate p) const { return x <  p.x; }
+    bool operator <= (Gate p) const { return x <= p.x; }
+    bool operator >  (Gate p) const { return x >  p.x; }
+    bool operator >= (Gate p) const { return x >= p.x; }
 };
 
 const Gate gate_Undef = { ((1U << 30)-1) << 2 };
@@ -60,7 +63,10 @@ struct Sig {
     unsigned int x;
     bool operator == (Sig p) const { return x == p.x; }
     bool operator != (Sig p) const { return x != p.x; }
-    bool operator <  (Sig p) const { return x < p.x;  } // '<' makes p, ~p adjacent in the ordering.
+    bool operator <  (Sig p) const { return x <  p.x; } // '<' makes p, ~p adjacent in the ordering.
+    bool operator <= (Sig p) const { return x <= p.x; }
+    bool operator >  (Sig p) const { return x >  p.x; }
+    bool operator >= (Sig p) const { return x >= p.x; }
 };
 
 //const Sig lit_Undef = mkSig(var_Undef, false);  // }- Useful special constants.
