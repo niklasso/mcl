@@ -194,3 +194,41 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
             }
 }
 
+void Minisat::mkSubst(const Circ& c, const Equivs& eq, GMap<Sig>& subst)
+{
+    // Initialize to identity substitution:
+    subst.clear();
+    subst.growTo(c.lastGate(), sig_Undef);
+    subst[gate_True] = sig_True;
+    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
+        subst[g] = mkSig(g);
+
+    // Update identity substitution with given equivalences:
+    for (uint32_t i = 0; i < eq.size(); i++){
+        Sig leader = eq[i][0];
+        assert(!sign(leader));
+        for (int j = 1; j < eq[i].size(); j++){
+            Sig x = eq[i][j];
+            subst[gate(x)] = leader ^ sign(x);
+        }
+    }
+}
+
+//=================================================================================================
+// Debug etc:
+
+void Minisat::printSig(Sig x)
+{
+    if (x == sig_Undef)
+        printf("x");
+    else if (x == sig_True)
+        printf("1");
+    else if (x == sig_False)
+        printf("0");
+    else
+        printf("%s%c%d", sign(x)?"-":"", type(x)==gtype_Inp?'i':'a', index(gate(x)));
+}
+
+void Minisat::printGate(Gate g){ printSig(mkSig(g)); }
+
+

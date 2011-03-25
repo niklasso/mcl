@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdio.h>
 
 #include "mcl/Circ.h"
+#include "mcl/Equivs.h"
 
 namespace Minisat {
 
@@ -48,9 +49,13 @@ void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
 void copyCircWithSubst
              (const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
 
+void mkSubst (const Circ& c, const Equivs& eq, GMap<Sig>& subst);
+
 //=================================================================================================
 // Debug etc:
 
+void printGate(Gate g);
+void printSig (Sig x);
 
 //=================================================================================================
 
