@@ -48,7 +48,7 @@ public:
 
 
 inline uint32_t        Equivs::size      ()            const { return classes.size(); }
-inline const vec<Sig>& Equivs::operator[](uint32_t cl) const { assert(cl < classes.size()); return classes[cl]; }
+inline const vec<Sig>& Equivs::operator[](uint32_t cl) const { assert(cl < (uint32_t)classes.size()); return classes[cl]; }
 inline Sig             Equivs::leader    (Sig x)       const {
     while (union_find.has(gate(x)) && union_find[gate(x)] != sig_Undef)
         x = union_find[gate(x)] ^ sign(x);
