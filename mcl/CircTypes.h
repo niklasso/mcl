@@ -75,6 +75,7 @@ const Sig sig_False = { 2 };
 inline  Sig mkSig(Gate g, bool sign = false){ 
     Sig p; p.x = g.x + (unsigned)sign + (unsigned)sign; return p; }
 
+// TODO: make sure 'sig_Undef == ~sig_Undef' and 'sig_Error == ~sig_Error'?
 inline  Sig      operator ~(Sig p)                       { Sig q; q.x = p.x ^ 2; return q; }
 inline  Sig      operator ^(Sig p, bool b)               { Sig q; q.x = p.x ^ (((unsigned int)b)<<1); return q; }
 inline  bool     sign      (Sig p)                       { return bool(p.x & 2); }
