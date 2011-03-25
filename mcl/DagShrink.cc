@@ -275,6 +275,7 @@ void dagShrink(const Circ& in, Circ& out, vec<Sig>&xs, CircMatcher& cm, GMap<Sig
 
 Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<Sig>& map, double& rnd_seed)
 {
+    assert(g != gate_Undef);
     // fprintf(stderr, "Copying gate: %d\n", index(g));
 
     if (map[g] != sig_Undef) return map[g];
