@@ -131,6 +131,7 @@ $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB).$(SOMAJOR).$(SOMINOR)$(SORELEASE)\
 	$(VERB) ln -sf $(MCL_DLIB).$(SOMAJOR) $(BUILD_DIR)/dynamic/lib/$(MCL_DLIB)
 
 install:	install-headers install-lib
+install-debug:	install-headers install-lib-debug
 
 install-headers:
 #       Create directories
@@ -140,7 +141,7 @@ install-headers:
 	  $(INSTALL) -m 644 $$h $(DESTDIR)$(includedir)/$$h ; \
 	done
 
-install-debug: $(BUILD_DIR)/debug/lib/$(MCL_SLIB)
+install-lib-debug: $(BUILD_DIR)/debug/lib/$(MCL_SLIB)
 	$(INSTALL) -d $(DESTDIR)$(libdir)
 	$(INSTALL) -m 644 $(BUILD_DIR)/debug/lib/$(MCL_SLIB) $(DESTDIR)$(libdir)
 
