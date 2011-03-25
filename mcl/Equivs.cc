@@ -19,6 +19,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "minisat/mtl/Alg.h"
 #include "mcl/Equivs.h"
+// TMP:
+#include "mcl/CircPrelude.h"
 
 using namespace Minisat;
 
@@ -27,15 +29,20 @@ bool Equivs::merge(Sig x, Sig y)
     assert(x != sig_Undef);
     assert(y != sig_Undef);
 
+    // printf(" ... merging[1]: x="); printSig(x); printf(", y="); printSig(y); printf("\n");
+
     x = leader(x);
     y = leader(y);
 
     if (y < x)  { Sig tmp = x; x = y; y = tmp; } // Order (useful?).
     if (sign(x)){ x = ~x; y = ~y; }              // Make 'x' unsigned.
-    if (x != y) return false;                    // Tried to merge 'x' with '~x'.
-    if (x == y) return true;                     // Merge 'x' with 'x' is redundant.
+    if (x == ~y) return false;                   // Tried to merge 'x' with '~x'.
+    if (x ==  y) return true;                    // Merge 'x' with 'x' is redundant.
 
     assert(x < y);
+
+    // printf(" ... merging[2]: x="); printSig(x); printf(", y="); printSig(y); printf("\n");
+
     // Map 'y' to 'x' while handling signs:
     union_find.growTo(gate(y), sig_Undef);
     union_find[gate(y)] = x ^ sign(y);
@@ -50,9 +57,9 @@ bool Equivs::merge(Sig x, Sig y)
     }
 
     // Extend the class for 'x' with all elements of 'y':
-    if (!class_map.has(gate(y)) && class_map[gate(y)] == class_Undef)
+    if (!class_map.has(gate(y)) || class_map[gate(y)] == class_Undef)
         // Just append 'y' to 'x' previous class:
-        classes[class_map[gate(x)]].push(y);
+        classes[xid].push(y);
     else{
         // Append all of 'y's elements to 'x':
         ClassId& yid = class_map[gate(y)];
@@ -60,13 +67,19 @@ bool Equivs::merge(Sig x, Sig y)
 
         // Free the class-vector for 'y':
         ClassId final = classes.size()-1;
+        assert(classes.size() > 0);
+        assert(yid < (uint32_t)classes.size());
         if (final > yid){
-            classes[final].moveTo(classes[yid]);
             assert(!sign(classes[final][0]));
             class_map[gate(classes[final][0])] = yid;
+            classes[final].moveTo(classes[yid]);
         }
         classes.pop();
+        yid = class_Undef;
     }
+
+    assert(!sign(classes[xid][0]));
+    assert(classes[xid][0] == x);
 
     return true;
 }
