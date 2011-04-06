@@ -140,19 +140,19 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
     map.growTo(src.lastGate(), sig_Undef);
 
     map[gate_True] = sig_True;
-    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
-        if (map[g] == sig_Undef)
-            if (type(g) == gtype_Inp)
-                map[g] = dst.mkInp();
+    for (GateIt git = src.begin(); git != src.end(); ++git)
+        if (map[*git] == sig_Undef)
+            if (type(*git) == gtype_Inp)
+                map[*git] = dst.mkInp();
             else {
-                assert(type(g) == gtype_And);
+                assert(type(*git) == gtype_And);
                 
-                Sig ix = src.lchild(g);
-                Sig iy = src.rchild(g);
+                Sig ix = src.lchild(*git);
+                Sig iy = src.rchild(*git);
                 Sig ux = map[gate(ix)] ^ sign(ix);
                 Sig uy = map[gate(iy)] ^ sign(iy);
 
-                map[g] = dst.mkAnd(ux, uy);
+                map[*git] = dst.mkAnd(ux, uy);
             }
 }
 
@@ -176,21 +176,21 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
     copy_map .growTo(src.lastGate(), sig_Undef);
 
     copy_map[gate_True] = sig_True;
-    for (Gate g = src.firstGate(); g != gate_Undef; g = src.nextGate(g))
-        if (copy_map[g] == sig_Undef)
-            if (type(g) == gtype_Inp)
-                copy_map[g] = dst.mkInp();
+    for (GateIt git = src.begin(); git != src.end(); ++git)
+        if (copy_map[*git] == sig_Undef)
+            if (type(*git) == gtype_Inp)
+                copy_map[*git] = dst.mkInp();
             else {
-                assert(type(g) == gtype_And);
+                assert(type(*git) == gtype_And);
                 
-                Sig orig_x  = src.lchild(g);
-                Sig orig_y  = src.rchild(g);
+                Sig orig_x  = src.lchild(*git);
+                Sig orig_y  = src.rchild(*git);
                 Sig subst_x = subst_map[gate(orig_x)] == sig_Undef ? orig_x : subst_map[gate(orig_x)] ^ sign(orig_x);
                 Sig subst_y = subst_map[gate(orig_y)] == sig_Undef ? orig_y : subst_map[gate(orig_y)] ^ sign(orig_y);
                 Sig copy_x  = copy_map[gate(subst_x)] ^ sign(subst_x);
                 Sig copy_y  = copy_map[gate(subst_y)] ^ sign(subst_y);
 
-                copy_map[g] = dst.mkAnd(copy_x, copy_y);
+                copy_map[*git] = dst.mkAnd(copy_x, copy_y);
             }
 }
 
@@ -200,8 +200,8 @@ void Minisat::mkSubst(const Circ& c, const Equivs& eq, GMap<Sig>& subst)
     subst.clear();
     subst.growTo(c.lastGate(), sig_Undef);
     subst[gate_True] = sig_True;
-    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
-        subst[g] = mkSig(g);
+    for (GateIt git = c.begin(); git != c.end(); ++git)
+        subst[*git] = mkSig(*git);
 
     // Update identity substitution with given equivalences:
     for (uint32_t i = 0; i < eq.size(); i++){

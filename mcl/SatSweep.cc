@@ -475,16 +475,16 @@ void Minisat::makeUnitClass(const Circ& cin, Eqs& unit)
     GMap<bool> val; val.growTo(cin.lastGate(), 0);
 
     val[gate_True] = 1;
-    for (Gate g = cin.firstGate(); g != gate_Undef; g = cin.nextGate(g))
-        if (type(g) == gtype_And){
-            Sig x   = cin.lchild(g);
-            Sig y   = cin.rchild(g);
-            val[g] = (val[gate(x)] ^ sign(x)) && (val[gate(y)] ^ sign(y));
+    for (GateIt git = cin.begin(); git != cin.end(); ++git)
+        if (type(*git) == gtype_And){
+            Sig x     = cin.lchild(*git);
+            Sig y     = cin.rchild(*git);
+            val[*git] = (val[gate(x)] ^ sign(x)) && (val[gate(y)] ^ sign(y));
         }
 
     vec<Sig>& cls = unit.last();
     cls.push(sig_True);
-    for (Gate g = cin.firstGate(); g != gate_Undef; g = cin.nextGate(g))
-        cls.push(mkSig(g, !val[g]));
+    for (GateIt git = cin.begin(); git != cin.end(); ++git)
+        cls.push(mkSig(*git, !val[*git]));
 }
 

@@ -230,8 +230,8 @@ void Minisat::makeSubstMap(const Circ& c, const Eqs& eqs, GMap<Sig>& m)
     m.clear();
     m.growTo(c.lastGate(), sig_Undef);
     m[gate_True] = sig_True;
-    for (Gate g = c.firstGate(); g != gate_Undef; g = c.nextGate(g))
-        m[g] = mkSig(g);
+    for (GateIt git = c.begin(); git != c.end(); ++git)
+        m[*git] = mkSig(*git);
 
     // printf(" ::: MAKE SUBST MAP:\n");
 

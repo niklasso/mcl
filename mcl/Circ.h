@@ -94,8 +94,10 @@ class Circ
     void commit ();
 
     // Gate iterator:
+ private:
     Gate nextGate (Gate g) const { assert(g != gate_Undef); uint32_t ind = index(g) + 1; return ind == (uint32_t)gates.size() ? gate_Undef : gateFromId(ind); }
     Gate firstGate()       const { return nextGate(gateFromId(0)); }
+ public:
     Gate lastGate ()       const { return gateFromId(gates.size()-1); }
 
     class GateIt {
@@ -145,7 +147,7 @@ class Circ
         assert(type(g) == gtype_Inp);
         assert(g != gate_Undef);
         assert(g <= lastGate());
-        return *(uint32_t*)&gates[g].y; }
+        return gates[g].y.x; }
     
     // Node inspection functions:
     Sig lchild(Gate g) const;
@@ -165,6 +167,11 @@ class Circ
     void dump();
 };
 
+
+// Convenience Type Aliases for iterators:
+
+typedef Circ::GateIt GateIt;
+typedef Circ::InpIt  InpIt;
 
 //=================================================================================================
 // Box -- a class for storing inputs and outputs (roots/sinks) to a (sub) circuit:
@@ -424,8 +431,8 @@ inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
 inline Sig  Circ::mkInp    (uint32_t num){ 
     n_inps++; 
     Gate g = mkGate(allocId(), gtype_Inp); 
-    gates[g].x = sig_Undef; 
-    gates[g].y = *(Sig*)num;
+    gates[g].x   = sig_Undef; 
+    gates[g].y.x = num;
     return mkSig(g, false); }
 
 inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only){
