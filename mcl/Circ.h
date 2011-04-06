@@ -98,8 +98,39 @@ class Circ
     Gate firstGate()       const { return nextGate(gateFromId(0)); }
     Gate lastGate ()       const { return gateFromId(gates.size()-1); }
 
+    class GateIt {
+    protected:
+        const Circ& c;
+        Gate        g;
+    public:
+        GateIt(const Circ& _c, Gate _g) : c(_c), g(_g){}
+
+        Gate   operator* () const { return g; }
+        GateIt operator++()       { g = c.nextGate(g); return *this; }
+
+        bool   operator==(const GateIt& gi) const { return g == gi.g; }
+        bool   operator!=(const GateIt& gi) const { return g != gi.g; }
+    };
+
+    class InpIt : GateIt {
+        void nextInput(){
+            while (g != gate_Undef && type(g) != gtype_Inp)
+                g = c.nextGate(g);
+        }
+    public:
+        InpIt(const Circ& _c, Gate _g) : GateIt(_c,_g) { nextInput(); }
+        InpIt operator++() { g = c.nextGate(g); nextInput(); return *this; }
+    };
+
+    GateIt begin0  () const { return GateIt(*this, gateFromId(0)); }
+    GateIt begin   () const { return ++begin0(); }
+    GateIt end     () const { return GateIt(*this, gate_Undef); }
+
+    InpIt  inpBegin() const { return InpIt(*this, gateFromId(0)); }
+    InpIt  inpEnd  () const { return InpIt(*this, gate_Undef); }
+
     // Node constructor functions:
-    Sig mkInp    ();
+    Sig mkInp    (uint32_t num = UINT32_MAX);
     Sig mkAnd    (Sig x, Sig y, bool try_only = false);
     Sig mkOr     (Sig x, Sig y);
     Sig mkXorOdd (Sig x, Sig y);
@@ -108,6 +139,13 @@ class Circ
     Sig mkMuxOdd (Sig x, Sig y, Sig z);
     Sig mkMuxEven(Sig x, Sig y, Sig z);
     Sig mkMux    (Sig x, Sig y, Sig z);
+
+    // Input numbering:
+    uint32_t& number(Gate g){
+        assert(type(g) == gtype_Inp);
+        assert(g != gate_Undef);
+        assert(g <= lastGate());
+        return *(uint32_t*)&gates[g].y; }
     
     // Node inspection functions:
     Sig lchild(Gate g) const;
@@ -376,7 +414,6 @@ inline Sig  Circ::lchild(Gate g) const   { assert(type(g) == gtype_And && g != g
 inline Sig  Circ::rchild(Gate g) const   { assert(type(g) == gtype_And && g != gate_True && g != gate_Undef); return gates[g].y; }
 inline Sig  Circ::lchild(Sig  x) const   { assert(type(x) == gtype_And && gate(x) != gate_True && x != sig_Undef); return gates[gate(x)].x; }
 inline Sig  Circ::rchild(Sig  x) const   { assert(type(x) == gtype_And && gate(x) != gate_True && x != sig_Undef); return gates[gate(x)].y; }
-inline Sig  Circ::mkInp    ()            { n_inps++; Gate g = mkGate(allocId(), gtype_Inp); gates[g].x = sig_Undef; return mkSig(g, false); }
 inline Sig  Circ::mkOr     (Sig x, Sig y){ return ~mkAnd(~x, ~y); }
 inline Sig  Circ::mkXorOdd (Sig x, Sig y){ return mkOr (mkAnd(x, ~y), mkAnd(~x, y)); }
 inline Sig  Circ::mkXorEven(Sig x, Sig y){ return mkAnd(mkOr(~x, ~y), mkOr ( x, y)); }
@@ -384,6 +421,12 @@ inline Sig  Circ::mkXor    (Sig x, Sig y){ return mkXorEven(x, y); }
 inline Sig  Circ::mkMuxOdd (Sig x, Sig y, Sig z) { return mkOr (mkAnd( x, y), mkAnd(~x, z)); }
 inline Sig  Circ::mkMuxEven(Sig x, Sig y, Sig z) { return mkAnd(mkOr (~x, y), mkOr ( x, z)); }
 inline Sig  Circ::mkMux    (Sig x, Sig y, Sig z) { return mkMuxEven(x, y, z); }
+inline Sig  Circ::mkInp    (uint32_t num){ 
+    n_inps++; 
+    Gate g = mkGate(allocId(), gtype_Inp); 
+    gates[g].x = sig_Undef; 
+    gates[g].y = *(Sig*)num;
+    return mkSig(g, false); }
 
 inline Sig  Circ::mkAnd    (Sig x, Sig y, bool try_only){
     assert(x != sig_Undef);
