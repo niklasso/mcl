@@ -49,7 +49,8 @@ const Gate gate_Undef = { ((1U << 30)-1) << 2 };
 const Gate gate_True  = { 0 };
 
 // Use this as a constructor:
-inline Gate         mkGate  (unsigned int id, GateType t){ Gate g; g.x = (id << 2) + t; return g; }
+inline Gate         mkGate  (unsigned int id, GateType t){
+    Gate g; g.x = (id << 2) + (unsigned int)(t == gtype_And); return g; }
 inline GateType     type    (Gate g){ return g == gate_True ? gtype_Const : GateType(g.x & 1); }
 
 // Note! Use GMap instead of this:
