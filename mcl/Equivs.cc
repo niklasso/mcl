@@ -61,9 +61,10 @@ bool Equivs::merge(Sig x, Sig y)
         // Just append 'y' to 'x' previous class:
         classes[xid].push(y);
     else{
-        // Append all of 'y's elements to 'x':
+        // Append all of 'y's elements to 'x' with potentially inverted sign:
         ClassId& yid = class_map[gate(y)];
-        append(classes[yid], classes[xid]);
+        for (int i = 0; i < classes[yid].size(); i++)
+            classes[xid].push(classes[yid][i] ^ sign(y));
 
         // Free the class-vector for 'y':
         ClassId final = classes.size()-1;
