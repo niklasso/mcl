@@ -238,7 +238,9 @@ class Clausifyer
     }
 
     lbool modelValue(Sig s){
-        return modelValue(gate(s)) ^ sign(s);
+        Lit x = lookup(s);
+        return x == lit_Undef ? l_Undef
+             : solver.modelValue(x);
     }
 
     void assume(Sig x){
