@@ -86,7 +86,7 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
 
     // Create input gates:
     for (int i = 0; i < n_inputs; i++){
-        Sig x = c.mkInp();
+        Sig x = c.mkInp(i);
         b.inps.push(gate(x));
         id2sig[i+1] = x;
     }
@@ -97,7 +97,7 @@ void Minisat::readAiger(const char* filename, Circ& c, Box& b, Flops& flp)
 
     // Create latch gates:
     for (int i = 0; i < n_flops; i++){
-        Sig x = c.mkInp();
+        Sig x = c.mkInp(i);
         id2sig[i+n_inputs+1] = x;
         latch_gates.push(gate(x));
     }

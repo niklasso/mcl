@@ -110,11 +110,12 @@ class Circ
         Gate   operator* () const { return g; }
         GateIt operator++()       { g = c.nextGate(g); return *this; }
 
-        bool   operator==(const GateIt& gi) const { return g == gi.g; }
-        bool   operator!=(const GateIt& gi) const { return g != gi.g; }
+        bool   operator==(const GateIt& gi) const { assert(&c == &gi.c); return g == gi.g; }
+        bool   operator!=(const GateIt& gi) const { assert(&c == &gi.c); return g != gi.g; }
     };
 
-    class InpIt : GateIt {
+    class InpIt : public GateIt {
+    protected:
         void nextInput(){
             while (g != gate_Undef && type(g) != gtype_Inp)
                 g = c.nextGate(g);
@@ -143,11 +144,8 @@ class Circ
     Sig mkMux    (Sig x, Sig y, Sig z);
 
     // Input numbering:
-    uint32_t& number(Gate g){
-        assert(type(g) == gtype_Inp);
-        assert(g != gate_Undef);
-        assert(g <= lastGate());
-        return gates[g].y.x; }
+    const uint32_t& number(Gate g) const { return gates[g].y.x; }
+    uint32_t&       number(Gate g)       { return gates[g].y.x; }
     
     // Node inspection functions:
     Sig lchild(Gate g) const;

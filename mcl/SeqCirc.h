@@ -33,6 +33,40 @@ struct SeqCirc
     Circ  main;
     Circ  init;
     Flops flps;
+
+    class InpIt : public Circ::InpIt {
+        const Flops& flps;
+    protected:
+        void nextInput(){
+            while (g != gate_Undef && flps.isFlop(g)){
+                Circ::InpIt::operator++();
+                Circ::InpIt::nextInput();
+            }
+        }
+    public:
+        InpIt(const SeqCirc& _sc, Gate _g) : Circ::InpIt(_sc.main,_g), flps(_sc.flps) { nextInput(); }
+        InpIt operator++() { Circ::InpIt::operator++(); nextInput(); return *this; }
+    };
+
+    class FlopIt : public Circ::InpIt {
+        const Flops& flps;
+    protected:
+        void nextFlop(){
+            while (g != gate_Undef && !flps.isFlop(g)){
+                Circ::InpIt::operator++();
+                Circ::InpIt::nextInput();
+            }
+        }
+    public:
+        FlopIt(const SeqCirc& _sc, Gate _g) : Circ::InpIt(_sc.main,_g), flps(_sc.flps) { nextFlop(); }
+        FlopIt operator++() { Circ::InpIt::operator++(); nextFlop(); return *this; }
+    };
+
+    InpIt  inpBegin() const { return InpIt(*this, gate_True /* FIXME: Is this weird? */); }
+    InpIt  inpEnd  () const { return InpIt(*this, gate_Undef); }
+
+    FlopIt flpsBegin() const { return FlopIt(*this, gate_True /* FIXME: Is this weird? */); }
+    FlopIt flpsEnd  () const { return FlopIt(*this, gate_Undef); }
 };
 
 //=================================================================================================
