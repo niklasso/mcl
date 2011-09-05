@@ -67,6 +67,12 @@ struct SeqCirc
 
     FlopIt flpsBegin() const { return FlopIt(*this, gate_True /* FIXME: Is this weird? */); }
     FlopIt flpsEnd  () const { return FlopIt(*this, gate_Undef); }
+
+    void   clear    (){
+        main.clear();
+        init.clear();
+        flps.clear();
+    }
 };
 
 //=================================================================================================

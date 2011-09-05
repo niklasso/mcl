@@ -1,5 +1,5 @@
 /*****************************************************************************************[Aiger.h]
-Copyright (c) 2007, Niklas Sorensson
+Copyright (c) 2007-2011, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mcl/Circ.h"
 #include "mcl/Flops.h"
+#include "mcl/SeqCirc.h"
 
 namespace Minisat {
 
@@ -29,8 +30,24 @@ namespace Minisat {
 // Functions for parsing and printing circuits in the AIGER format. See <http://fmv.jku.at/aiger/>
 // for specification of this format as well as supporting tools and example circuits.
 
-void readAiger (const char* filename,       Circ& c,       Box& b,       Flops& flp);
-void writeAiger(const char* filename, const Circ& c, const Box& b, const Flops& flp);
+void readAiger (const char* filename,       SeqCirc& c,       vec<Sig>& outs);
+void writeAiger(const char* filename, const SeqCirc& c, const vec<Sig>& outs);
+void readAiger (const char* filename,       Circ& c,          vec<Sig>& outs);
+void writeAiger(const char* filename, const Circ& c,    const vec<Sig>& outs);
+
+
+struct AigerSections {
+    vec<Sig>       outs;   // Circuit ouputs.
+
+    vec<Sig>       cnstrs; // Global constraints for all properties.
+    vec<Sig>       fairs;  // Fairness constraints for all liveness properties.
+
+    vec<Sig>       bads;   // Safety proerties in form of bad state detectors.
+    vec<vec<Sig> > justs;  // Liveness properties in form of justice groups.
+};
+
+void readAiger_v19 (const char* filename,       SeqCirc& c,       AigerSections& sects);
+void writeAiger_v19(const char* filename, const SeqCirc& c, const AigerSections& sects);
 
 //=================================================================================================
 

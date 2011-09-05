@@ -243,6 +243,31 @@ class Clausifyer
              : solver.modelValue(x);
     }
 
+    lbool modelValue(Gate g, GMap<lbool>& model){
+        model.growTo(g, l_Undef);
+        Lit x = lookup(g);
+        if (x == lit_Undef){
+            if (g == gate_True)
+                return l_True;
+            else if (type(g) == gtype_Inp)
+                return l_Undef;
+            else if (type(g) == gtype_And && model[g] == l_Undef){
+                lbool xv = modelValue(circ.lchild(g), model);
+                lbool yv = modelValue(circ.rchild(g), model);
+                lbool gv = xv && yv;
+                model[g] = gv;
+            }
+            return model[g];
+        }else
+            return solver.modelValue(x);
+    }
+
+    lbool modelValue(Sig x, GMap<lbool>& model){
+        lbool tmp = modelValue(gate(x));
+        return tmp == l_Undef ? l_Undef : tmp ^ sign(x); 
+    }
+
+
     void assume(Sig x){
         vec<Sig> top;
         vec<Sig> disj;
