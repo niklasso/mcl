@@ -56,6 +56,7 @@ void mkSubst (const Circ& c, const Equivs& eq, GMap<Sig>& subst);
 
 void printGate(Gate g);
 void printSig (Sig x);
+void printSigs(const vec<Sig>& xs);
 
 //=================================================================================================
 

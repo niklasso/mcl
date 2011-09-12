@@ -231,4 +231,16 @@ void Minisat::printSig(Sig x)
 
 void Minisat::printGate(Gate g){ printSig(mkSig(g)); }
 
+void Minisat::printSigs(const vec<Sig>& xs)
+{
+    printf("{ ");
+    if (xs.size() > 0)
+        printSig(xs[0]);
+    for (int i = 1; i < xs.size(); i++){
+        printf(", ");
+        printSig(xs[i]);
+    }
+    printf(" }");
+}
+
 
