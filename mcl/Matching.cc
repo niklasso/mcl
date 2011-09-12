@@ -1,5 +1,5 @@
 /*************************************************************************************[Matching.cc]
-Copyright (c) 2007, Niklas Sorensson
+Copyright (c) 2007-2011, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -20,13 +20,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mcl/Circ.h"
 #include "mcl/Matching.h"
 
-using namespace Minisat;
+namespace Minisat {
 
 //=================================================================================================
 // Circuit pattern matching functions:
 //
 
-bool Minisat::matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z)
+bool CircMatcher::matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z)
 {
     Sig ll = c.lchild(g);
     Sig lr = c.rchild(g);
@@ -48,11 +48,10 @@ bool Minisat::matchMuxParts(const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& 
     if (is_mux && sign(x)){ Sig tmp = y; y = z; z = tmp; x = ~x; }
 
     return is_mux;
-    
 }
 
 
-bool Minisat::matchMux(const Circ& c, Gate g, Sig& x, Sig& y, Sig& z)
+bool CircMatcher::matchMux(const Circ& c, Gate g, Sig& x, Sig& y, Sig& z)
 {
     if (type(g) != gtype_And) return false;
 
@@ -65,7 +64,7 @@ bool Minisat::matchMux(const Circ& c, Gate g, Sig& x, Sig& y, Sig& z)
 }
 
 
-bool Minisat::matchXor(const Circ& c, Gate g, Sig& x, Sig& y)
+bool CircMatcher::matchXor(const Circ& c, Gate g, Sig& x, Sig& y)
 {
     Sig z;
 
@@ -84,9 +83,8 @@ bool Minisat::matchXor(const Circ& c, Gate g, Sig& x, Sig& y)
 
 
 // NOTE: Not sure what to do about sharing within an xor expression. Just match trees for now.
-bool Minisat::matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs)
+bool CircMatcher::matchXors(const Circ& c, Gate g, vec<Sig>& xs)
 {
-
     Sig x, y;
     if (!matchXor(c, g, x, y)) return false;
 
@@ -138,33 +136,7 @@ bool Minisat::matchXors(const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs
     return true;
 }
 
-#if 0
-
-static void matchAndsRec(const Circ& c, Sig x, vec<Sig>& xs, bool match_muxes)
-{
-    Sig tmp_x, tmp_y, tmp_z;
-    if (type(gate(x)) == gtype_And && !sign(x) && c.nFanouts(gate(x)) == 1 &&
-        (match_muxes || !matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
-        ){
-        matchAndsRec(c, c.lchild(gate(x)), xs, match_muxes);
-        matchAndsRec(c, c.rchild(gate(x)), xs, match_muxes);
-    }else
-        xs.push(x);
-}
-
-void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
-{
-    assert(g != gate_Undef);
-    assert(g != gate_True);
-    assert(type(g) == gtype_And);
-
-    matchAndsRec(c, c.lchild(g), xs, match_muxes);
-    matchAndsRec(c, c.rchild(g), xs, match_muxes);
-    normalizeAnds(xs);
-}
-
-#else
-void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes)
+void CircMatcher::matchAnds(const Circ& c, Gate g, vec<Sig>& xs, bool match_muxes)
 {
     assert(g != gate_Undef);
     assert(g != gate_True);
@@ -192,8 +164,9 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
         assert(gate(x) != gate_True);
 
         Sig tmp_x, tmp_y, tmp_z;
-        // if (type(x) != gtype_And || sign(x) || c.nFanouts(gate(x)) > 1 || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
-        if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        // if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        // if (type(x) != gtype_And || sign(x) || isPinned(gate(x)) || c.nFanouts(gate(x)) > 1 || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        if (type(x) != gtype_And || sign(x) || isPinned(gate(x)) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
             continue;
 
         g = gate(x);
@@ -237,21 +210,11 @@ void Minisat::matchAnds(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stac
     //     fprintf(stderr, "%s%d ", sign(xs[i])?"-":"", index(gate(xs[i])));
     // fprintf(stderr, "\n");
 }
-#endif
 
-static inline void printSigs(const vec<Sig>& xs)
-{
-    fprintf(stderr, "{ ");
-    for (int i = 0; i < xs.size(); i++)
-        fprintf(stderr, "%s%s%d ", sign(xs[i])?"-":"", type(xs[i]) == gtype_Inp ? "$" : "@", index(gate(xs[i])));
-    fprintf(stderr, "}");
-}
-
-
-void Minisat::matchTwoLevel(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<vec<Sig> >& xss, bool match_muxes)
+void CircMatcher::matchTwoLevel(const Circ& c, Gate g, vec<vec<Sig> >& xss, bool match_muxes)
 {
     vec<Sig> top;
-    matchAnds(c, g, tmp_set, tmp_stack, tmp_fanouts, top, match_muxes);
+    matchAnds(c, g, top, match_muxes);
 
     xss.clear();
     if (top.size() == 1 && top[0] == sig_False) {
@@ -266,7 +229,7 @@ void Minisat::matchTwoLevel(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_
             xss.last().push(top[i]);
         else {
             assert(type(top[i]) == gtype_And);
-            matchAnds(c, gate(top[i]), tmp_set, tmp_stack, tmp_fanouts, xss.last(), match_muxes);
+            matchAnds(c, gate(top[i]), xss.last(), match_muxes);
             for (int j = 0; j < xss.last().size(); j++)
                 xss.last()[j] = ~xss.last()[j];
         }
@@ -293,7 +256,7 @@ void Minisat::matchTwoLevel(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_
     for (int i = 0; i < top.size(); i++)
         if (type(top[i]) == gtype_And && sign(top[i]) && c.nFanouts(gate(top[i])) > 1){
             tmp_context.push();
-            matchAnds(c, gate(top[i]), tmp_set, tmp_stack, tmp_fanouts, tmp_context.last(), match_muxes);
+            matchAnds(c, gate(top[i]), tmp_context.last(), match_muxes);
             for (int j = 0; j < tmp_context.last().size(); j++)
                 tmp_context.last()[j] = ~tmp_context.last()[j];
         }
@@ -319,3 +282,5 @@ void Minisat::matchTwoLevel(const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_
     
 
 }
+
+} // namespace Minisat

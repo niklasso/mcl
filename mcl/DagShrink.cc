@@ -78,7 +78,7 @@ static void randomShuffle(double& seed, vec<vec<T> >& xs)
 
 static const int cut_off = 100;
 
-static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
+static Sig rebuildAnds(Circ& in, CircMatcher& cm, vec<Sig>& xs, double& rnd_seed)
 {
     if (xs.size() == 0) return sig_True;
 
@@ -138,7 +138,7 @@ static Sig rebuildAnds(Circ& in, vec<Sig>& xs, double& rnd_seed)
                 if (xs[j] == sig_Undef || !sign(xs[j]) || type(xs[j]) != gtype_And || in.nFanouts(gate(xs[j])) != 0) continue;
                 
                 Sig x, y, z;
-                if (matchMuxParts(in, gate(xs[i]), gate(xs[j]), x, y, z)){
+                if (cm.matchMuxParts(in, gate(xs[i]), gate(xs[j]), x, y, z)){
                     // int gates_before = in.nGates();
                     xs.push(in.mkMux(x, y, z));
                     // assert(gates_before + 1 == in.nGates());
@@ -305,7 +305,7 @@ Sig Minisat::dagShrink(const Circ& in, Circ& out, Gate g, CircMatcher& cm, GMap<
 
         ::dagShrink(in, out, xs, cm, map, rnd_seed);
         // normalizeAnds(xs); // New redundancies may arise after recursive copying/shrinking.
-        result = rebuildAnds(out, xs, rnd_seed);
+        result = rebuildAnds(out, cm, xs, rnd_seed);
 
     }else {
         //fprintf(stderr, "Matched an input\n");

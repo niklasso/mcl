@@ -20,30 +20,22 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Matching_h
 #define Minisat_Matching_h
 
-#include "mcl/CircTypes.h"
+#include "mcl/Circ.h"
 
 namespace Minisat {
 
 //=================================================================================================
-// Circuit pattern matching functions:
-
-class Circ;
-
-bool matchMuxParts (const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
-bool matchMux      (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z);
-bool matchXor      (const Circ& c, Gate g, Sig& x, Sig& y);
-bool matchXors     (const Circ& c, Gate g, vec<Sig>& tmp_stack, vec<Sig>& xs);
-void matchAnds     (const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<Sig>& xs, bool match_muxes = false);
-void matchTwoLevel (const Circ& c, Gate g, GSet& tmp_set, vec<Sig>& tmp_stack, GMap<int>& tmp_fanouts, vec<vec<Sig> >& xss, bool match_muxes = false);
-
-//=================================================================================================
-// CircMatcher -- a helper class for efficient pattern matching of subcircuits:
+// CircMatcher -- a helper class for pattern matching of subcircuits:
 
 class CircMatcher
 {
     GSet                tmp_set;
     vec<Sig>            tmp_stack;
     GMap<int>           tmp_fanouts;
+    GMap<char>          pinned;
+
+    bool isPinned      (Gate g);
+
  public:
 
     bool matchMuxParts (const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z);
@@ -52,17 +44,17 @@ class CircMatcher
     bool matchXors     (const Circ& c, Gate g, vec<Sig>& xs);
     void matchAnds     (const Circ& c, Gate g, vec<Sig>& xs, bool match_muxes = false);
     void matchTwoLevel (const Circ& c, Gate g, vec<vec<Sig> >& xss, bool match_muxes = false);
+
+    // Force 'g' to never be contained in a matched pattern:
+    // TODO: currently only respected by big-ands:
+    void pin           (const Circ& c, Gate g);
 };
 
-inline bool CircMatcher::matchMuxParts (const Circ& c, Gate g, Gate h, Sig& x, Sig& y, Sig& z) { return Minisat::matchMuxParts(c, g, h, x, y, z); }
-inline bool CircMatcher::matchMux      (const Circ& c, Gate g, Sig& x, Sig& y, Sig& z) { return Minisat::matchMux(c, g, x, y, z); }
-inline bool CircMatcher::matchXor      (const Circ& c, Gate g, Sig& x, Sig& y) { return Minisat::matchXor(c, g, x, y); }
-inline bool CircMatcher::matchXors     (const Circ& c, Gate g, vec<Sig>& xs) { return Minisat::matchXors(c, g, tmp_stack, xs); }
-inline void CircMatcher::matchAnds     (const Circ& c, Gate g, vec<Sig>& xs, bool match_muxes) { Minisat::matchAnds(c, g, tmp_set, tmp_stack, tmp_fanouts, xs, match_muxes); }
-inline void CircMatcher::matchTwoLevel (const Circ& c, Gate g, vec<vec<Sig> >& xss, bool match_muxes) { Minisat::matchTwoLevel(c, g, tmp_set, tmp_stack, tmp_fanouts, xss, match_muxes); }
-
 //=================================================================================================
-// Debug etc:
+// Inline implementations:
+
+inline bool CircMatcher::isPinned(Gate g)               { return pinned.has(g) && pinned[g]; }
+inline void CircMatcher::pin     (const Circ& c, Gate g){ pinned.growTo(c.lastGate(), 0); pinned[g] = 1; }
 
 };
 

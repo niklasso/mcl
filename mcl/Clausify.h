@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/core/SolverTypes.h"
 #include "minisat/simp/SimpSolver.h"
 #include "mcl/Circ.h"
+#include "mcl/Matching.h"
 
 namespace Minisat {
 
@@ -125,6 +126,9 @@ class Clausifyer
 
                     if (vmap[g] == lit_Undef) vmap[g] = mkLit(solver.newVar());
                     Lit lg = vmap[g];
+
+                    // Make sure that this gate is never expaded in future big-and matches:
+                    cm.pin(circ, g);
 
                     Sig x, y, z;
                     if (match_muxes && cm.matchMux(circ, g, x, y, z)){
@@ -263,7 +267,7 @@ class Clausifyer
     }
 
     lbool modelValue(Sig x, GMap<lbool>& model){
-        lbool tmp = modelValue(gate(x));
+        lbool tmp = modelValue(gate(x), model);
         return tmp == l_Undef ? l_Undef : tmp ^ sign(x); 
     }
 

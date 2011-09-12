@@ -25,7 +25,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Queue.h"
 #include "minisat/core/SolverTypes.h"
 #include "mcl/CircTypes.h"
-#include "mcl/Matching.h"
 #include "mcl/Normalization.h"
 
 namespace Minisat {
