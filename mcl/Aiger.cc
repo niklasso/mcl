@@ -342,8 +342,8 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
     vec<unsigned int> aiger_outputs;
     vec<unsigned int> aiger_bads;
     vec<unsigned int> aiger_cnstrs;
-    // vec<unsigned int> aiger_justs;
-    // vec<unsigned int> aiger_fairs;
+    vec<vec<unsigned int> > aiger_justs;
+    vec<unsigned int> aiger_fairs;
     vec<unsigned int> aiger_latch_nexts;
     vec<unsigned int> aiger_latch_inits;
     vec<Gate>         latch_gates;
@@ -380,8 +380,21 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
         aiger_cnstrs.push(parseInt(in));
         skipLine(in); }
 
-    // TODO: justice, fairness
+    // Read justice properties:
+    for (int i = 0; i < n_justs; i++){
+        aiger_justs.push();
+        aiger_justs.last().growTo(parseInt(in));
+        skipLine(in); }
+    for (int i = 0; i < aiger_justs.size(); i++)
+        for (int j = 0; j < aiger_justs[i].size(); j++){
+            aiger_justs[i][j] = parseInt(in);
+            skipLine(in); }
 
+    // Read fairness constraints:
+    for (int i = 0; i < n_fairs; i++){
+        aiger_fairs.push(parseInt(in));
+        skipLine(in); }
+    
     // Read gates:
     for (int i = n_inputs + n_flops + 1; i < max_var + 1; i++){
         unsigned delta0 = readPacked(in);
@@ -407,6 +420,17 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
     // Map constraints:
     for (int i = 0; i < aiger_cnstrs.size(); i++)
         sects.cnstrs.push(aigToSig(id2sig, aiger_cnstrs[i]));
+
+    // Map justice properties:
+    for (int i = 0; i < aiger_justs.size(); i++){
+        sects.justs.push();
+        for (int j = 0; j < aiger_justs[i].size(); j++)
+            sects.justs.last().push(aigToSig(id2sig, aiger_justs[i][j]));
+    }
+
+    // Map fairness constraints:
+    for (int i = 0; i < aiger_fairs.size(); i++)
+        sects.fairs.push(aigToSig(id2sig, aiger_fairs[i]));
 
     // Map flops:
     uint32_t init_x_id = 0;
