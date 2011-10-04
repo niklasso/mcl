@@ -143,9 +143,9 @@ class Circ
     Sig mkMux    (Sig x, Sig y, Sig z);
 
     // Input numbering:
-    const uint32_t& number(Gate g) const { return gates[g].y.x; }
-    uint32_t&       number(Gate g)       { return gates[g].y.x; }
-    
+    const uint32_t& number(Gate g) const { assert(type(g) == gtype_Inp); return gates[g].y.x; }
+    uint32_t&       number(Gate g)       { assert(type(g) == gtype_Inp); return gates[g].y.x; }
+
     // Node inspection functions:
     Sig lchild(Gate g) const;
     Sig rchild(Gate g) const;
