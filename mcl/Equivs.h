@@ -35,17 +35,23 @@ class Equivs
     GMap<Sig>       union_find;
     GMap<ClassId>   class_map;
     vec<vec<Sig> >  classes;
+    bool            ok;
 
 public:
+    Equivs();
+
     uint32_t        size      ()              const;
     const vec<Sig>& operator[](uint32_t cl)   const;
 
     Sig             leader    (Sig x)         const;
     bool            merge     (Sig x, Sig y);
-
+    bool            okay      ()              const;
     void            clear     (bool dealloc = false);
+
+    void            moveTo    (Equivs& to);
 };
 
+inline Equivs::Equivs() : ok(true){}
 
 inline uint32_t        Equivs::size      ()            const { return classes.size(); }
 inline const vec<Sig>& Equivs::operator[](uint32_t cl) const { assert(cl < (uint32_t)classes.size()); return classes[cl]; }
@@ -54,6 +60,7 @@ inline Sig             Equivs::leader    (Sig x)       const {
         x = union_find[gate(x)] ^ sign(x);
     return x;
 }
+inline bool            Equivs::okay      ()            const { return ok; }
 
 
 

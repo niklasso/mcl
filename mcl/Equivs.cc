@@ -24,8 +24,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
+// TODO: use path compression in merge.
 bool Equivs::merge(Sig x, Sig y)
 {
+    if (!ok) return false;
+
     assert(x != sig_Undef);
     assert(y != sig_Undef);
 
@@ -36,7 +39,7 @@ bool Equivs::merge(Sig x, Sig y)
 
     if (y < x)  { Sig tmp = x; x = y; y = tmp; } // Order (useful?).
     if (sign(x)){ x = ~x; y = ~y; }              // Make 'x' unsigned.
-    if (x == ~y) return false;                   // Tried to merge 'x' with '~x'.
+    if (x == ~y) return ok = false;              // Tried to merge 'x' with '~x'.
     if (x ==  y) return true;                    // Merge 'x' with 'x' is redundant.
 
     assert(x < y);
@@ -91,4 +94,13 @@ void Equivs::clear(bool dealloc)
     union_find.clear(dealloc);
     class_map .clear(dealloc);
     classes   .clear(dealloc);
+}
+
+
+void Equivs::moveTo(Equivs& to)
+{
+    union_find.moveTo(to.union_find);
+    class_map .moveTo(to.class_map);
+    classes   .moveTo(to.classes);
+    to.ok = ok;
 }
