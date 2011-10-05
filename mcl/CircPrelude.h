@@ -48,6 +48,8 @@ void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_ma
 void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
 void copyCircWithSubst
              (const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
+void copyCircWithSubst
+             (const Circ& src, Circ& dst, Equivs& subst, GMap<Sig>& copy_map);
 
 void mkSubst (const Circ& c, const Equivs& eq, GMap<Sig>& subst);
 

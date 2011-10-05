@@ -194,6 +194,34 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
             }
 }
 
+
+// New version: needs testing.
+void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, Equivs& subst, GMap<Sig>& copy_map)
+{
+    copy_map .growTo(src.lastGate(), sig_Undef);
+
+    copy_map[gate_True] = sig_True;
+    for (GateIt git = src.begin(); git != src.end(); ++git)
+        if (copy_map[*git] == sig_Undef)
+            if (type(*git) == gtype_Inp)
+                copy_map[*git] = dst.mkInp();
+            else {
+                assert(type(*git) == gtype_And);
+                
+                Sig orig_x  = src.lchild(*git);
+                Sig orig_y  = src.rchild(*git);
+                Sig subst_x = subst.leader(orig_x);
+                Sig subst_y = subst.leader(orig_y);
+                assert(subst_x <= orig_x);
+                assert(subst_y <= orig_y);
+                Sig copy_x  = copy_map[gate(subst_x)] ^ sign(subst_x);
+                Sig copy_y  = copy_map[gate(subst_y)] ^ sign(subst_y);
+
+                copy_map[*git] = dst.mkAnd(copy_x, copy_y);
+            }
+}
+
+
 void Minisat::mkSubst(const Circ& c, const Equivs& eq, GMap<Sig>& subst)
 {
     // Initialize to identity substitution:
