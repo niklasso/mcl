@@ -107,7 +107,7 @@ static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_
         if (g == gate_True)
             copy_map[g] = sig_True;
         else if (type(g) == gtype_Inp)
-            copy_map[g] = dst.mkInp();
+            copy_map[g] = dst.mkInp(src.number(g));
         else{
             assert(type(g) == gtype_And);
             copy_map[g] = dst.mkAnd(_copySig(src, dst, src.lchild(g), copy_map), 
@@ -143,7 +143,7 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
     for (GateIt git = src.begin(); git != src.end(); ++git)
         if (map[*git] == sig_Undef)
             if (type(*git) == gtype_Inp)
-                map[*git] = dst.mkInp();
+                map[*git] = dst.mkInp(src.number(*git));
             else {
                 assert(type(*git) == gtype_And);
                 
@@ -170,6 +170,8 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map)
 // 
 // FIXME: The documentation for this function is only partial. What is left is to describe how "only
 // occurences are substituted, but not the gates themselves."
+#if 1
+// TODO: Remove this (replaced by new version below).
 void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map)
 {
     subst_map.growTo(src.lastGate(), sig_Undef);
@@ -179,7 +181,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
     for (GateIt git = src.begin(); git != src.end(); ++git)
         if (copy_map[*git] == sig_Undef)
             if (type(*git) == gtype_Inp)
-                copy_map[*git] = dst.mkInp();
+                copy_map[*git] = dst.mkInp(src.number(*git));
             else {
                 assert(type(*git) == gtype_And);
                 
@@ -193,7 +195,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
                 copy_map[*git] = dst.mkAnd(copy_x, copy_y);
             }
 }
-
+#endif
 
 // New version: needs testing.
 void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, Equivs& subst, GMap<Sig>& copy_map)
@@ -204,7 +206,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, Equivs& subst, GMap<
     for (GateIt git = src.begin(); git != src.end(); ++git)
         if (copy_map[*git] == sig_Undef)
             if (type(*git) == gtype_Inp)
-                copy_map[*git] = dst.mkInp();
+                copy_map[*git] = dst.mkInp(src.number(*git));
             else {
                 assert(type(*git) == gtype_And);
                 
