@@ -223,11 +223,13 @@ class Clausifyer
     }
 
     Lit lookup(Gate g){
+        assert(g != gate_Undef);
         vmap.growTo(g, lit_Undef);
         return vmap[g];
     }
 
     Lit lookup(Sig s){
+        assert(s != sig_Undef);
         vmap.growTo(gate(s), lit_Undef);
         if (vmap[gate(s)] == lit_Undef)
             return lit_Undef;
@@ -236,14 +238,14 @@ class Clausifyer
     }
 
     lbool modelValue(Gate g){
-        Lit x = lookup(g);
-        return x == lit_Undef ? l_Undef
+        Lit x;
+        return g == gate_Undef || (x = lookup(g)) == lit_Undef ? l_Undef
              : solver.modelValue(x);
     }
 
     lbool modelValue(Sig s){
-        Lit x = lookup(s);
-        return x == lit_Undef ? l_Undef
+        Lit x;
+        return s == sig_Undef || (x = lookup(s)) == lit_Undef ? l_Undef
              : solver.modelValue(x);
     }
 
