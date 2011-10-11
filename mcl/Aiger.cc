@@ -295,7 +295,11 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
 
     vec<int> header(9, 0);
     for (int i = 0; *in != '\n'; i++)
-        header[i] = parseInt(in, false);
+        if (i < 9)
+            header[i] = parseInt(in);
+        else
+            fprintf(stderr, "ERROR! Header contains too many sections\n"), exit(1);
+    skipLine(in);
 
     int max_var   = header[0];
     int n_inputs  = header[1];
@@ -357,9 +361,9 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
 
     // Read latch definitions:
     for (int i = 0; i < n_flops; i++){
-        aiger_latch_nexts.push(parseInt(in, false));
+        aiger_latch_nexts.push(parseInt(in));
         if (*in != '\n')
-            aiger_latch_inits.push(parseInt(in, false));
+            aiger_latch_inits.push(parseInt(in));
         else
             aiger_latch_inits.push(0);
         skipLine(in);
@@ -404,7 +408,7 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
         id2sig[i]       = c.main.mkAnd(aigToSig(id2sig, x), aigToSig(id2sig, y));
 
         assert(i < id2sig.size());
-        assert((int)delta0 < 2*i);
+        assert(delta0 <= 2*i);
         assert(delta1 <= 2*i - delta0);
         // fprintf(stderr, "read gate %d = %d & %d\n", 2*i, x, y);
     }
