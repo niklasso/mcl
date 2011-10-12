@@ -45,7 +45,7 @@ void bottomUpOrder(const Circ& c, const vec<Sig>&  xs, GSet& gset);
 Sig  copyGate(const Circ& src, Circ& dst, Gate g,             GMap<Sig>& copy_map);
 Sig  copySig (const Circ& src, Circ& dst, Sig  x,             GMap<Sig>& copy_map);
 void copySig (const Circ& src, Circ& dst, const vec<Sig>& xs, GMap<Sig>& copy_map);
-void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map);
+void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map, Gate stop_at = gate_Undef);
 void copyCircWithSubst
              (const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
 void copyCircWithSubst
