@@ -18,6 +18,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include "minisat/mtl/Alg.h"
+#include "minisat/mtl/Sort.h"
 #include "mcl/Equivs.h"
 // TMP:
 #include "mcl/CircPrelude.h"
@@ -104,3 +105,72 @@ void Equivs::moveTo(Equivs& to)
     classes   .moveTo(to.classes);
     to.ok = ok;
 }
+
+
+void Equivs::copyTo(Equivs& to) const
+{
+    union_find.copyTo(to.union_find);
+    class_map .copyTo(to.class_map);
+    //classes   .copyTo(to.classes);
+    to.classes.clear();
+    for (int i = 0; i < classes.size(); i++){
+        to.classes.push();
+        classes[i].copyTo(to.classes.last());
+    }
+
+    to.ok = ok;
+}
+
+
+//=================================================================================================
+// Implementation of set functions:
+
+void Minisat::equivsUnion(const Equivs& e, const Equivs& f, Equivs& g)
+{
+    e.copyTo(g);
+    for (unsigned i = 0; i < f.size(); i++){
+        Sig repr = f[i][0];
+
+        for (int j = 1; j < f[i].size(); j++)
+            g.merge(repr, f[i][j]);
+    }
+}
+
+
+struct LeaderLt
+{
+    const Equivs& eqs;
+    LeaderLt(const Equivs& eqs_) : eqs(eqs_){}
+    bool operator()(Sig x, Sig y) const { return eqs.leader(x) < eqs.leader(y); }
+};
+
+
+void Minisat::equivsIntersection(const Equivs& e, const Equivs& f, Equivs& g)
+{
+    g.clear();
+
+    for (unsigned i = 0; i < f.size(); i++){
+        vec<Sig> xs; copy(f[i], xs);
+        sort(xs, LeaderLt(e));
+
+        int j,k;
+        for (j = 0, k = 1; k < xs.size(); k++){
+            // printf(" .. intersect .. checking (i = %d, j = %d, k = %d): ", i, j, k);
+            // printSig(xs[j]);
+            // printf(" => ");
+            // printSig(e.leader(xs[j]));
+            // printf(" vs ");
+            // printSig(xs[k]);
+            // printf(" => ");
+            // printSig(e.leader(xs[k]));
+            // printf("\n");
+
+            if (e.leader(xs[j]) == e.leader(xs[k]))
+                g.merge(xs[j], xs[k]);
+            else
+                j = k;
+        }
+    }
+}
+
+

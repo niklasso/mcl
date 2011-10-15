@@ -47,8 +47,10 @@ public:
     bool            merge     (Sig x, Sig y);
     bool            okay      ()              const;
     void            clear     (bool dealloc = false);
+    bool            equals    (Sig x, Sig y)  const;
 
     void            moveTo    (Equivs& to);
+    void            copyTo    (Equivs& to) const;
 };
 
 inline Equivs::Equivs() : ok(true){}
@@ -61,8 +63,11 @@ inline Sig             Equivs::leader    (Sig x)       const {
     return x;
 }
 inline bool            Equivs::okay      ()            const { return ok; }
+inline bool            Equivs::equals    (Sig x, Sig y)const { return leader(x) == leader(y); }
 
 
+void equivsUnion       (const Equivs& e, const Equivs& f, Equivs& g);
+void equivsIntersection(const Equivs& e, const Equivs& f, Equivs& g);
 
 //=================================================================================================
 
