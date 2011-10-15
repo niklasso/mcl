@@ -200,7 +200,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
 #endif
 
 // New version: needs testing.
-void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, Equivs& subst, GMap<Sig>& copy_map)
+void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, const Equivs& subst, GMap<Sig>& copy_map)
 {
     copy_map .growTo(src.lastGate(), sig_Undef);
 

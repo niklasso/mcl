@@ -49,7 +49,7 @@ void copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map, Gate stop_at = gate_Un
 void copyCircWithSubst
              (const Circ& src, Circ& dst, GMap<Sig>& subst_map, GMap<Sig>& copy_map);
 void copyCircWithSubst
-             (const Circ& src, Circ& dst, Equivs& subst, GMap<Sig>& copy_map);
+             (const Circ& src, Circ& dst, const Equivs& subst, GMap<Sig>& copy_map);
 
 void mkSubst (const Circ& c, const Equivs& eq, GMap<Sig>& subst);
 
