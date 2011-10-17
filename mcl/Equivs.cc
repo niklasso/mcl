@@ -40,7 +40,14 @@ bool Equivs::merge(Sig x, Sig y)
 
     if (y < x)  { Sig tmp = x; x = y; y = tmp; } // Order (useful?).
     if (sign(x)){ x = ~x; y = ~y; }              // Make 'x' unsigned.
-    if (x == ~y) return ok = false;              // Tried to merge 'x' with '~x'.
+    if (x == ~y){                                // Tried to merge 'x' with '~x'.
+        // Create canonical contradictory equivalence:
+        classes.clear();
+        classes.push();
+        classes.last().push(sig_True);
+        classes.last().push(sig_False);
+        return ok = false;
+    }
     if (x ==  y) return true;                    // Merge 'x' with 'x' is redundant.
 
     assert(x < y);
