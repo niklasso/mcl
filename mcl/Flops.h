@@ -49,7 +49,7 @@ public:
 
     // Move/Copy/Clear:
     void moveTo    (Flops& to);
-    void copyTo    (Flops& to);
+    void copyTo    (Flops& to) const;
     void clear     (bool dealloc = false);
 
 private:

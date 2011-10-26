@@ -39,5 +39,5 @@ void Flops::define(Gate flop, Sig next, Sig init){
 
 
 void Flops::moveTo    (Flops& to)       { def_map.moveTo(to.def_map); flops.moveTo(to.flops); }
-void Flops::copyTo    (Flops& to)       { def_map.copyTo(to.def_map); flops.copyTo(to.flops); }
+void Flops::copyTo    (Flops& to) const { def_map.copyTo(to.def_map); flops.copyTo(to.flops); }
 void Flops::clear     (bool dealloc)    { def_map.clear(dealloc); flops.clear(dealloc); }
