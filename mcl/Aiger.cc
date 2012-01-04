@@ -211,12 +211,13 @@ void Minisat::writeAiger(const char* filename, const SeqCirc& c, const vec<Sig>&
     vec<Gate> sinks;
     for (int i = 0; i < outs.size(); i++)   sinks.push(gate(outs[i]));
     for (int i = 0; i < c.flps.size(); i++) sinks.push(gate(c.flps.next(c.flps[i])));
-#ifndef NDEBUG
+
     // AIGER only supports zero-initialized flops, and there is no conversion built into this
     // function. TODO: make this check always-on somehow.
     for (SeqCirc::FlopIt fit = c.flpsBegin(); fit != c.flpsEnd(); ++fit)
-        assert(c.flps.init(*fit) == sig_False);
-#endif
+        if (c.flps.init(*fit) != sig_False)
+            printf("ERROR! AIGER writer only supports zero-initialized flops at the moment.\n"), exit(1);
+
     bottomUpOrder(c.main, sinks, uporder);
 
     uint32_t           n_gates = uporder.size() - n_inputs - n_flops;
