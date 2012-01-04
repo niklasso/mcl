@@ -175,6 +175,7 @@ void Minisat::writeAiger(const char* filename, const SeqCirc& c, const vec<Sig>&
     // fprintf(stderr, "aig %u %u %u %d %d\n", c.main.size(), inputs.size(), latch_defs.size(), outputs.size(), c.main.nGates());
 
     // Generate list of inputs ordered by input numbering:
+#if 0
     vec<Gate> inps;
     for (InpIt iit = c.inpBegin(); iit != c.inpEnd(); ++iit){
         Gate     inp = *iit;
@@ -191,6 +192,11 @@ void Minisat::writeAiger(const char* filename, const SeqCirc& c, const vec<Sig>&
     // Check that numbering does not contain holes.
     for (int i = 0; i < inps.size(); i++)
         assert(inps[i] != gate_Undef);
+#endif
+#else
+    vec<Gate> inps;
+    for (SeqCirc::InpIt iit = c.inpBegin(); iit != c.inpEnd(); ++iit)
+        inps.push(*iit);
 #endif
 
     uint32_t n_inputs = inps.size();
