@@ -91,7 +91,7 @@ class Clausifyer
                 clausify_mark[g] = mark_done;
                 stack.pop();
 
-            }else if (type(g) == gtype_And)
+            }else if (type(g) == gtype_And){
                 // And gate:
                 //
                 if (clausify_mark[g] == mark_undef){
@@ -185,6 +185,7 @@ class Clausifyer
                     stack.pop();
                 }else
                     stack.pop();
+            }
         }
         
     }

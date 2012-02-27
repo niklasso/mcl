@@ -103,7 +103,7 @@ static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_
 static inline Sig _copySig (const Circ& src, Circ& dst, Sig  x, GMap<Sig>& copy_map){ return _copyGate(src, dst, gate(x), copy_map) ^ sign(x); }
 static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_map)
 {
-    if (copy_map[g] == sig_Undef)
+    if (copy_map[g] == sig_Undef){
         if (g == gate_True)
             copy_map[g] = sig_True;
         else if (type(g) == gtype_Inp)
@@ -113,6 +113,7 @@ static        Sig _copyGate(const Circ& src, Circ& dst, Gate g, GMap<Sig>& copy_
             copy_map[g] = dst.mkAnd(_copySig(src, dst, src.lchild(g), copy_map), 
                                     _copySig(src, dst, src.rchild(g), copy_map));
         }
+    }
 
     return copy_map[g];
 }
@@ -141,7 +142,7 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map, Gate stop_at)
 
     map[gate_True] = sig_True;
     for (GateIt git = src.begin(); git != src.end(); ++git){
-        if (map[*git] == sig_Undef)
+        if (map[*git] == sig_Undef){
             if (type(*git) == gtype_Inp)
                 map[*git] = dst.mkInp(src.number(*git));
             else {
@@ -154,6 +155,7 @@ void Minisat::copyCirc(const Circ& src, Circ& dst, GMap<Sig>& map, Gate stop_at)
 
                 map[*git] = dst.mkAnd(ux, uy);
             }
+        }
         if (stop_at != gate_Undef && *git == stop_at) break;
     }
 }
@@ -181,7 +183,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
 
     copy_map[gate_True] = sig_True;
     for (GateIt git = src.begin(); git != src.end(); ++git)
-        if (copy_map[*git] == sig_Undef)
+        if (copy_map[*git] == sig_Undef){
             if (type(*git) == gtype_Inp)
                 copy_map[*git] = dst.mkInp(src.number(*git));
             else {
@@ -196,6 +198,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, GMap<Sig>& subst_map
 
                 copy_map[*git] = dst.mkAnd(copy_x, copy_y);
             }
+        }
 }
 #endif
 
@@ -206,7 +209,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, const Equivs& subst,
 
     copy_map[gate_True] = sig_True;
     for (GateIt git = src.begin(); git != src.end(); ++git)
-        if (copy_map[*git] == sig_Undef)
+        if (copy_map[*git] == sig_Undef){
             if (type(*git) == gtype_Inp)
                 copy_map[*git] = dst.mkInp(src.number(*git));
             else {
@@ -223,6 +226,7 @@ void Minisat::copyCircWithSubst(const Circ& src, Circ& dst, const Equivs& subst,
 
                 copy_map[*git] = dst.mkAnd(copy_x, copy_y);
             }
+        }
 }
 
 

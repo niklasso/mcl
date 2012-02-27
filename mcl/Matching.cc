@@ -166,7 +166,8 @@ void CircMatcher::matchAnds(const Circ& c, Gate g, vec<Sig>& xs, bool match_muxe
         Sig tmp_x, tmp_y, tmp_z;
         // if (type(x) != gtype_And || sign(x) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
         // if (type(x) != gtype_And || sign(x) || isPinned(gate(x)) || c.nFanouts(gate(x)) > 1 || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
-        if (type(x) != gtype_And || sign(x) || isPinned(gate(x)) || !match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z))
+        if (type(x) != gtype_And || sign(x) || isPinned(gate(x)) || 
+            (!match_muxes && matchMux(c, gate(x), tmp_x, tmp_y, tmp_z)))
             continue;
 
         g = gate(x);

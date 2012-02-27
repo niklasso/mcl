@@ -302,31 +302,6 @@ static inline bool implies(const vec<vec<Sig> >& cnf, const vec<Sig>& clause)
 }
 
 #if 1
-// What were this intended for?
-static inline bool resolve(const vec<Sig>& xs, const vec<Sig>& ys, vec<Sig>& zs)
-{
-    Sig pivot = sig_Undef;
-
-    for (int i = 0; i < xs.size(); i++)
-        for (int j = 0; j < ys.size(); j++)
-            if (xs[i] == ~ys[j])
-                if (pivot == sig_Undef)
-                    pivot = xs[i];
-                else
-                    return false;
-
-    zs.clear();
-    for (int i = 0; i < xs.size(); i++)
-        if (xs[i] != pivot)
-            zs.push(xs[i]);
-
-    for (int i = 0; i < ys.size(); i++)
-        if (ys[i] != ~pivot)
-            zs.push(ys[i]);
-
-    return true;
-}
-
 
 static inline void removeRedundant(vec<vec<Sig> >& xss)
 {
