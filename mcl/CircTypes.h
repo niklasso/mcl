@@ -238,12 +238,16 @@ class GSet
         gs.clear(free);
     }
     
+    // Allow inspecting the internal vector:
+    const vec<Gate>&
+             toVec       ()          const  { return gs; }
+        
     // Vector interface:
     Gate     operator [] (int index) const  { return gs[index]; }
 
 
     void     insert      (Gate g) { in_set.growTo(g, 0); if (!in_set[g]) { in_set[g] = 1; gs.push(g); } }
-    bool     has         (Gate g) { in_set.growTo(g, 0); return in_set[g]; }
+    bool     has         (Gate g) const { return in_set.has(g) && in_set[g]; }
 };
 
 
@@ -267,9 +271,12 @@ class SSet
     // Vector interface:
     Sig      operator [] (int index) const  { return xs[index]; }
 
+    // Allow inspecting the internal vector:
+    const vec<Sig>&
+             toVec       ()          const  { return xs; }
 
     void     insert      (Sig  x) { in_set.growTo(x, 0); if (!in_set[x]) { in_set[x] = 1; xs.push(x); } }
-    bool     has         (Sig  x) { in_set.growTo(x, 0); return in_set[x]; }
+    bool     has         (Sig  x) const { return in_set.has(x) && in_set[x]; }
 };
 
 
