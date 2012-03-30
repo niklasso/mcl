@@ -1,4 +1,12 @@
 ================================================================================
+Overview
+
+MCL is a simple circuit library for formal verification that works
+well with the SAT solver MiniSat. It supports And-Inverter-Graph
+circuits, sequential circuits, and parsing of circuits in the AIGER
+file format.
+
+================================================================================
 Quick Install
 
 - Install MiniSat. Below the location of MiniSat headers and library
