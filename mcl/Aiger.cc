@@ -319,18 +319,16 @@ void Minisat::readAiger_v19(const char* filename, SeqCirc& c, AigerSections& sec
     int n_justs   = header[7];
     int n_fairs   = header[8];
 
-    fprintf(stderr, "max_var   = %d\n", max_var);
-    fprintf(stderr, "n_inputs  = %d\n", n_inputs);
-    fprintf(stderr, "n_outputs = %d\n", n_outputs);
-    fprintf(stderr, "n_flops   = %d\n", n_flops);
-    fprintf(stderr, "n_gates   = %d\n", n_gates);
-
-    fprintf(stderr, "n_bads    = %d\n", n_bads);
-    fprintf(stderr, "n_cnstrs  = %d\n", n_cnstrs);
-    fprintf(stderr, "n_justs   = %d\n", n_justs);
-    fprintf(stderr, "n_fairs   = %d\n", n_fairs);
-
-    fprintf(stderr, "sum       = %d\n", n_gates + n_flops + n_inputs);
+    fprintf(stdout, "max_var   = %d\n", max_var);
+    fprintf(stdout, "n_inputs  = %d\n", n_inputs);
+    fprintf(stdout, "n_outputs = %d\n", n_outputs);
+    fprintf(stdout, "n_flops   = %d\n", n_flops);
+    fprintf(stdout, "n_gates   = %d\n", n_gates);
+    fprintf(stdout, "n_bads    = %d\n", n_bads);
+    fprintf(stdout, "n_cnstrs  = %d\n", n_cnstrs);
+    fprintf(stdout, "n_justs   = %d\n", n_justs);
+    fprintf(stdout, "n_fairs   = %d\n", n_fairs);
+    fprintf(stdout, "sum       = %d\n", n_gates + n_flops + n_inputs);
 
     if (max_var != n_inputs + n_flops + n_gates)
         fprintf(stderr, "ERROR! Header mismatching sizes (M != I + L + A)\n"), exit(1);
